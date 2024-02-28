@@ -49,7 +49,7 @@ except:
     pass
 
 data = np.load(samples)
-config_name = os.path.basename(filename)[:-4]
+config_name = os.path.basename(samples)[:-4]
 print(config_name)
 
 labels_dict = {"backpop_fixed_kicks_same_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$', r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
