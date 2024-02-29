@@ -60,11 +60,7 @@ nwalkers = data["nwalkers"]
 nsteps = data["n_steps"]
 gwsamples = data["gwsamples"]
 
-
-config_name, evolution, lower_bound, upper_bound = get_backpop_config(lowmass_secondary=False,
-                                                                      fixed_kicks=True,
-                                                                      same_alphas=True)
-print(config_name)
+evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 # chain = chain.reshape(-1,n_dim)
 
 
@@ -109,9 +105,6 @@ for ax in fig.get_axes():
 plt.savefig("./results/" + event_name + "/" + config_name + ".pdf")
 plt.close()
 
-np.savez("./results/" + event_name + "/" + config_name + "_flatchain", flat_chain=flat_chain)
-
-
 #### MAKE mcq PLOT ####
 m1s_b = []
 m2s_b = []
@@ -145,5 +138,5 @@ corner.corner(np.column_stack([mcs_b,qs_b]),color='green',fig=fig)
 for ax in fig.get_axes():
     ax.tick_params(axis='both', labelsize=14)
     
-plt.savefig('forward_corner.pdf')
+plt.savefig("./results/" + event_name + "/" + config_name + "_forward.pdf"')
 plt.close()

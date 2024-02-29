@@ -45,7 +45,6 @@ optp.add_argument("--event_name", help="name of event")
 optp.add_argument("--redshift_likelihood", type=str_to_bool, nargs='?', const=True, default=True)
 
 optp.add_argument('--fixed_kicks', type=str_to_bool, nargs='?', const=True, default=False)
-optp.add_argument('--same_alphas', type=str_to_bool, nargs='?', const=True, default=False)
 optp.add_argument('--lowmass_secondary', type=str_to_bool, nargs='?', const=True, default=False)
 
 optp.add_argument("--nwalkers", type=int)
@@ -101,12 +100,18 @@ Ms = m1s + m2s
 qs = m2s/m1s
 
 fixed_kicks = opts.fixed_kicks
-same_alphas = opts.same_alphas
 lowmass_secondary = opts.lowmass_secondary
 
-config_name, evolution, lower_bound, upper_bound = get_backpop_config(lowmass_secondary=lowmass_secondary,
-                                                                      fixed_kicks=fixed_kicks,
-                                                                      same_alphas=same_alphas)
+if fixed_kicks is True:
+    config_name = 'backpop_fixed_kicks'
+
+elif lowmass_secondary is True:
+    config_name = 'backpop_lowmass_secondary'
+    
+else:
+    config_name = 'backpop'
+
+evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 
 print(config_name)
 
