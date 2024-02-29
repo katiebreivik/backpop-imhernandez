@@ -111,23 +111,7 @@ def evolv2_fixed_kicks_same_alphas(m1, m2, logtb, e, alpha, acc_lim_1, acc_lim_2
     alpha_2 = alpha
     return evolv2_fixed_kicks(m1, m2, logtb, e, alpha_1, alpha_2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
 
-def evolv2_lowmass_secondary(m1, m2, logtb, e, alpha_1, alpha_2, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
-    vk1 = 0.0
-    theta1 = 0.0
-    phi1 = 0.0
-    omega1 = 0.0
-    return evolv2(m1, m2, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
-
-def evolv2_lowmass_secondary_new(m1, m2, logtb, e, alpha_1, alpha_2, vk1, vk2, theta2, phi2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
-    theta1 = 0.0
-    phi1 = 0.0
-    omega1 = 0.0
-    omega2 = 0.0
-    return evolv2(m1, m2, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
-
-def evolv2_lowmass_secondary_new_fixed_alphas(m1, m2, logtb, e, vk1, vk2, theta2, phi2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
-    alpha_1 = 1.0
-    alpha_2 = 1.0
+def evolv2_lowmass_secondary(m1, m2, logtb, e, alpha_1, alpha_2, vk1, vk2, theta2, phi2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
     theta1 = 0.0
     phi1 = 0.0
     omega1 = 0.0

@@ -176,9 +176,9 @@ else:
     lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, vklo, thetalo, philo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
     upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, vkhi, thetahi, phihi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
 
-    evolution = evolv2_lowmass_secondary_new
+    evolution = evolv2_lowmass_secondary
 
-    config_name = "backpop_lowmass_secondary_new" 
+    config_name = "backpop_lowmass_secondary" 
 
 print(config_name)
 
@@ -186,6 +186,7 @@ print(config_name)
 redshift_likelihood = opts.redshift_likelihood
 
 if redshift_likelihood is True:
+    print("using redshift")
     qmin = qs.min()
     qmax = qs.max()
     mcmin = mcs.min()
@@ -214,11 +215,14 @@ if redshift_likelihood is True:
         else:
             return -np.inf
 else:
-    print("sampling using masses only")
-    ddLdz = ddL_of_z(redshift,dL)
-    jacobian = dL**2*(1+redshift)**2*ddLdz
+    print("NOT using redshift")
+    qmin = qs.min()
+    qmax = qs.max()
+    mcmin = mcs.min()
+    mcmax = mcs.max()
+    print(qmin,qmax,mcmin,mcmax)
 
-    samples = np.column_stack([m1s,m2s])#,redshift])
+    samples = np.column_stack([mcs,qs])
     KDE = gaussian_kde(samples.T)
 
     def likelihood(coord):
@@ -228,14 +232,17 @@ else:
         if coord[1] > coord[0]:
             return -np.inf
         result = evolution(*coord)
-        #m1, m2, z = result[1][0], result[1][1], zoft(result[0])
-        m1, m2 = result[1][0], result[1][1]
+        m1, m2, z, dL = result[1][0], result[1][1], zoft(result[0]), dLoft(result[0])
         if (m1 == 0.0) or (m2 == 0.0):
             return -np.inf
-    #     gw_coord = np.array([m1, m2, z])
-    #     dL = dLofz(z)
-        gw_coord = np.array([m1, m2])
-        return KDE.logpdf(gw_coord)# - 2*np.log(dL) - 2*np.log1p(z) - np.log(ddL_of_z(z,dL)) - 2*np.log(dL)
+        q = m2/m1
+        mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
+        if ((q > qmin) and (q < qmax) and (mc > mcmin) and (mc < mcmax)):
+            gw_coord = np.array([mc, q])
+            ll = KDE.logpdf(gw_coord) - 2*np.log(dL) - 2*np.log1p(z) - np.log(ddLdz(z)) - np.log(m1**2/mc)
+            return ll[0]
+        else:
+            return -np.inf
 
 n_dim = len(lower_bound)
 n_walkers = opts.nwalkers
