@@ -47,7 +47,6 @@ optp.add_argument("--redshift_likelihood", type=str_to_bool, nargs='?', const=Tr
 optp.add_argument('--fixed_kicks', type=str_to_bool, nargs='?', const=True, default=False)
 optp.add_argument('--same_alphas', type=str_to_bool, nargs='?', const=True, default=False)
 optp.add_argument('--lowmass_secondary', type=str_to_bool, nargs='?', const=True, default=False)
-optp.add_argument('--fixed_alphas', type=str_to_bool, nargs='?', const=True, default=False)
 
 optp.add_argument("--nwalkers", type=int)
 optp.add_argument("--nsteps", type=int)
@@ -89,7 +88,6 @@ tofz = interp1d(zgrid,13700-tgrid,bounds_error=False,fill_value=1e100)
 dtdz = interp1d(zgrid,np.gradient(13700-tgrid,zgrid),bounds_error=False,fill_value=1e100)
 
 data = read(samples_path, package="gw")
-samples = data.samples_dict['C01:Mixed']
 
 m1det = data.samples_dict['C01:Mixed']['mass_1']
 m2det = data.samples_dict['C01:Mixed']['mass_2']
@@ -102,89 +100,17 @@ mcs = (m1s*m2s)**(3/5)/(m1s + m2s)**(1/5)
 Ms = m1s + m2s
 qs = m2s/m1s
 
-m1lo = 5.0
-m2lo = 5.0
-tblo = 5.0
-elo = 0.0
-alphalo_1 = 0.1
-alphalo_2 = 0.1
-vklo = 0.0
-thetalo = 0.0
-philo = -90.0
-omegalo = 0.0
-acc_limlo_1 = 0
-acc_limlo_2 = 0
-qc_kstar2lo = 0.5
-qc_kstar3lo = 0.5
-Zlo = 0.0001
-
-m1hi = 150.0
-m2hi = 150.0
-tbhi = 5000.0
-ehi = 0.9
-alphahi_1 = 20.0
-alphahi_2 = 20.0
-vkhi = 300.0
-thetahi = 360.0
-phihi = 90.0
-omegahi = 360
-acc_limhi_1 = 1.0
-acc_limhi_2 = 1.0
-qc_kstar2hi = 10.0
-qc_kstar3hi = 10.0
-Zhi = 0.03
-
 fixed_kicks = opts.fixed_kicks
 same_alphas = opts.same_alphas
 lowmass_secondary = opts.lowmass_secondary
-fixed_alphas = opts.fixed_alphas
 
-if (lowmass_secondary is False):
-    if (fixed_kicks is True) and (same_alphas is True):
-        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
-
-        evolution = evolv2_fixed_kicks_same_alphas
-
-        config_name = "backpop_fixed_kicks_same_alphas"
-
-    if (fixed_kicks is True) and (same_alphas is False):
-        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
-
-        evolution = evolv2_fixed_kicks
-
-        config_name = "backpop_fixed_kicks"
-
-    if (fixed_kicks is False) and (same_alphas is True):
-        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
-
-        evolution = evolv2_same_alphas
-
-        config_name = "backpop_same_alphas"
-
-    if (fixed_kicks is False) and (same_alphas is False):
-        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
-
-        evolution = evolv2
-
-        config_name = "backpop"
-
-else:
-    lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, vklo, thetalo, philo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-    upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, vkhi, thetahi, phihi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
-
-    evolution = evolv2_lowmass_secondary
-
-    config_name = "backpop_lowmass_secondary" 
+config_name, evolution, lower_bound, upper_bound = get_backpop_config(lowmass_secondary=lowmass_secondary,
+                                                                      fixed_kicks=fixed_kicks,
+                                                                      same_alphas=same_alphas)
 
 print(config_name)
 
-
 redshift_likelihood = opts.redshift_likelihood
-
 if redshift_likelihood is True:
     print("using redshift")
     qmin = qs.min()
@@ -193,8 +119,8 @@ if redshift_likelihood is True:
     mcmax = mcs.max()
     print(qmin,qmax,mcmin,mcmax)
 
-    samples = np.column_stack([mcs,qs,redshift])
-    KDE = gaussian_kde(samples.T)
+    gwsamples = np.column_stack([mcs,qs,redshift])
+    KDE = gaussian_kde(gwsamples.T)
 
     def likelihood(coord):
         for i in range(len(coord)):
@@ -222,8 +148,8 @@ else:
     mcmax = mcs.max()
     print(qmin,qmax,mcmin,mcmax)
 
-    samples = np.column_stack([mcs,qs])
-    KDE = gaussian_kde(samples.T)
+    gwsamples = np.column_stack([mcs,qs])
+    KDE = gaussian_kde(gwsamples.T)
 
     def likelihood(coord):
         for i in range(len(coord)):
@@ -288,6 +214,7 @@ np.savez("./results/" + event_name + "/" + config_name,
          nwalkers=n_walkers,
          n_steps=n_steps,
          chain=chain,
-         flat_chain=flat_chain)
+         flat_chain=flat_chain,
+         gwsamples=gwsamples)
 
 print("Flat chain has " + str(chain.shape[0]) + " samples")

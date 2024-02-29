@@ -5,7 +5,7 @@ import os
 from argparse import ArgumentParser
 import glob
 
-
+from backpop import *
 import h5py
 from tqdm import tqdm
 
@@ -52,22 +52,19 @@ data = np.load(samples)
 config_name = os.path.basename(samples)[:-4]
 print(config_name)
 
-labels_dict = {"backpop_fixed_kicks_same_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$', r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
-               "backpop_fixed_kicks" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
-               "backpop_same_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',r'$v_1$',r'$\theta_1$',r'$\phi_1$',r'$\omega_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
-               "backpop" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',r'$v_1$',r'$\theta_1$',r'$\phi_1$',r'$\omega_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
-               "backpop_lowmass_secondary" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
-               "backpop_lowmass_secondary_new" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',r'$v_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
-               "backpop_lowmass_secondary_new_fixed_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$v_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$']
-              }
-
 labels = labels_dict[config_name]
 
 n_dim = len(labels)
 chain = data["chain"]
 nwalkers = data["nwalkers"]
 nsteps = data["n_steps"]
+gwsamples = data["gwsamples"]
 
+
+config_name, evolution, lower_bound, upper_bound = get_backpop_config(lowmass_secondary=False,
+                                                                      fixed_kicks=True,
+                                                                      same_alphas=True)
+print(config_name)
 # chain = chain.reshape(-1,n_dim)
 
 
@@ -113,3 +110,40 @@ plt.savefig("./results/" + event_name + "/" + config_name + ".pdf")
 plt.close()
 
 np.savez("./results/" + event_name + "/" + config_name + "_flatchain", flat_chain=flat_chain)
+
+
+#### MAKE mcq PLOT ####
+m1s_b = []
+m2s_b = []
+ts_b = []
+
+for k in tqdm(range(len(flat_chain_plot))):
+    result = evolution(*flat_chain_plot[k])
+    m1b, m2b, tb = result[1][0], result[1][1], result[0]
+    if ((m1b == 0.0) or (m2b == 0.0)):
+        continue
+    else:
+        m1s_b.append(m1b)
+        m2s_b.append(m2b)
+        ts_b.append(tb)
+
+print(len(m1s_b))
+m1s_b = np.array(m1s_b)
+m2s_b = np.array(m2s_b)
+ts_b = np.array(ts_b)
+
+qs_b = m2s_b/m1s_b
+mcs_b = (m1s_b*m2s_b)**(3/5)/(m1s_b + m2s_b)**(1/5)
+
+fig = corner.corner(np.column_stack([gwsamples[:,0],gwsamples[:,1]]),labels=[r'$M_c$', r'$q$'],
+                    color='gray',levels=[0.68,0.95],  quantiles=[0.05,0.68,0.95],  show_titles=True,
+                    label_kwargs={"fontsize": 20},
+                    title_kwargs={"fontsize": 18},
+                    hist_kwargs={"linewidth": 2})
+corner.corner(np.column_stack([mcs_b,qs_b]),color='green',fig=fig)
+
+for ax in fig.get_axes():
+    ax.tick_params(axis='both', labelsize=14)
+    
+plt.savefig('forward_corner.pdf')
+plt.close()

@@ -4,7 +4,6 @@ import pandas as pd
 
 #     SUBROUTINE evolv2_global(z,zpars,acclim,alphain,qHG,qGB,kick_in)
 
-
 libc = cdll.LoadLibrary("/hildafs/home/magana/tmp_ondemand_hildafs_phy230014p_symlink/magana/src/COSMIC/cosmic/src/evolv2_bhms.so")
 np.set_printoptions(suppress=True)
 
@@ -125,3 +124,87 @@ def str_to_bool(value):
         return True
     raise ValueError(f'{value} is not a valid boolean value')
 
+m1lo = 5.0
+m2lo = 5.0
+tblo = 5.0
+elo = 0.0
+alphalo_1 = 0.1
+alphalo_2 = 0.1
+vklo = 0.0
+thetalo = 0.0
+philo = -90.0
+omegalo = 0.0
+acc_limlo_1 = 0
+acc_limlo_2 = 0
+qc_kstar2lo = 0.5
+qc_kstar3lo = 0.5
+Zlo = 0.0001
+
+m1hi = 150.0
+m2hi = 150.0
+tbhi = 5000.0
+ehi = 0.9
+alphahi_1 = 20.0
+alphahi_2 = 20.0
+vkhi = 300.0
+thetahi = 360.0
+phihi = 90.0
+omegahi = 360
+acc_limhi_1 = 1.0
+acc_limhi_2 = 1.0
+qc_kstar2hi = 10.0
+qc_kstar3hi = 10.0
+Zhi = 0.03
+
+def get_backpop_config(lowmass_secondary=False, fixed_kicks=False, same_alphas=False):
+    if (lowmass_secondary is False):
+        if (fixed_kicks is True) and (same_alphas is True):
+            lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
+            upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+
+            evolution = evolv2_fixed_kicks_same_alphas
+
+            config_name = "backpop_fixed_kicks_same_alphas"
+
+        if (fixed_kicks is True) and (same_alphas is False):
+            lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
+            upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+
+            evolution = evolv2_fixed_kicks
+
+            config_name = "backpop_fixed_kicks"
+
+        if (fixed_kicks is False) and (same_alphas is True):
+            lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
+            upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+
+            evolution = evolv2_same_alphas
+
+            config_name = "backpop_same_alphas"
+
+        if (fixed_kicks is False) and (same_alphas is False):
+            lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
+            upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+
+            evolution = evolv2
+
+            config_name = "backpop"
+
+    else:
+        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, vklo, thetalo, philo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, vkhi, thetahi, phihi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+
+        evolution = evolv2_lowmass_secondary
+
+        config_name = "backpop_lowmass_secondary" 
+        
+    return config_name, evolution, lower_bound, upper_bound
+
+labels_dict = {"backpop_fixed_kicks_same_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$', r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+               "backpop_fixed_kicks" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+               "backpop_same_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',r'$v_1$',r'$\theta_1$',r'$\phi_1$',r'$\omega_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+               "backpop" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',r'$v_1$',r'$\theta_1$',r'$\phi_1$',r'$\omega_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+               "backpop_lowmass_secondary" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+               "backpop_lowmass_secondary_new" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',r'$v_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+               "backpop_lowmass_secondary_new_fixed_alphas" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$v_1$',r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$', r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$']
+              }
