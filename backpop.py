@@ -128,7 +128,7 @@ acc_limlo_1 = 0
 acc_limlo_2 = 0
 qc_kstar2lo = 0.5
 qc_kstar3lo = 0.5
-Zlo = 0.00001
+Zlo = 0.0001
 
 m1hi = 150.0
 m2hi = 150.0

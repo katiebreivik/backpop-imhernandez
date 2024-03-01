@@ -138,5 +138,5 @@ corner.corner(np.column_stack([mcs_b,qs_b]),color='green',fig=fig)
 for ax in fig.get_axes():
     ax.tick_params(axis='both', labelsize=14)
     
-plt.savefig("./results/" + event_name + "/" + config_name + "_forward.pdf"')
+plt.savefig("./results/" + event_name + "/" + config_name + "_forward.pdf")
 plt.close()
