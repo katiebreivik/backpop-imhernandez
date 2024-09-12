@@ -50,6 +50,8 @@ except:
 
 data = np.load(samples)
 config_name = os.path.basename(samples)[:-4]
+if config_name[-9:] == '_redshift':
+    config_name = config_name[0:-9]
 print(config_name)
 
 labels = labels_dict[config_name]
@@ -102,7 +104,7 @@ fig = corner.corner(flat_chain_plot,labels=labels,
 for ax in fig.get_axes():
     ax.tick_params(axis='both', labelsize=14)
 
-plt.savefig("./results/" + event_name + "/" + config_name + ".pdf")
+plt.savefig("./results/" + event_name + "/" + os.path.basename(samples)[:-4] + ".pdf")
 plt.close()
 
 #### MAKE mcq PLOT ####
@@ -138,5 +140,5 @@ corner.corner(np.column_stack([mcs_b,qs_b]),color='green',fig=fig)
 for ax in fig.get_axes():
     ax.tick_params(axis='both', labelsize=14)
     
-plt.savefig("./results/" + event_name + "/" + config_name + "_forward.pdf")
+plt.savefig("./results/" + event_name + "/" + os.path.basename(samples)[:-4] + "_forward.pdf")
 plt.close()

@@ -20,36 +20,16 @@ from pesummary.io import read
 from backpop import *
 from tqdm import tqdm
 
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-
-matplotlib.rcParams['font.family']= 'Times New Roman'
-matplotlib.rcParams['font.sans-serif']= ['Bitstream Vera Sans']
-matplotlib.rcParams['text.usetex']= False
-matplotlib.rcParams['mathtext.fontset']= 'cm'
-matplotlib.rcParams['figure.figsize'] = (16.0, 10.0)
-
-import seaborn as sns
-sns.set_context('talk')
-sns.set_style('ticks')
-sns.set_palette('colorblind')
-cs = sns.color_palette('colorblind',as_cmap=True)
-
-import corner
 
 optp = ArgumentParser()
 optp.add_argument("--samples_path", help="path to event run dir")
 optp.add_argument("--event_name", help="name of event")
-
 optp.add_argument("--redshift_likelihood", type=str_to_bool, nargs='?', const=True, default=True)
 
-optp.add_argument('--fixed_kicks', type=str_to_bool, nargs='?', const=True, default=False)
-optp.add_argument('--lowmass_secondary', type=str_to_bool, nargs='?', const=True, default=False)
+optp.add_argument('--config_name', help="configuration to use")
 
 optp.add_argument("--nwalkers", type=int)
 optp.add_argument("--nsteps", type=int)
-
 optp.add_argument('--resume', type=str_to_bool, nargs='?', const=True, default=False)
 
 opts = optp.parse_args()
@@ -99,24 +79,15 @@ mcs = (m1s*m2s)**(3/5)/(m1s + m2s)**(1/5)
 Ms = m1s + m2s
 qs = m2s/m1s
 
-fixed_kicks = opts.fixed_kicks
-lowmass_secondary = opts.lowmass_secondary
-
-if fixed_kicks is True:
-    config_name = 'backpop_fixed_kicks'
-
-elif lowmass_secondary is True:
-    config_name = 'backpop_lowmass_secondary'
-    
-else:
-    config_name = 'backpop'
+config_name = opts.config_name
+print(config_name)
 
 evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 
-print(config_name)
 
 redshift_likelihood = opts.redshift_likelihood
 if redshift_likelihood is True:
+    config_name = config_name + '_redshift'
     print("using redshift")
     qmin = qs.min()
     qmax = qs.max()
@@ -199,7 +170,7 @@ num_cores = int(len(os.sched_getaffinity(0)))
 print("using multiprocessing with " + str(num_cores) + " cores")
 with Pool(int(2*num_cores-2)) as pool:
     sampler = emcee.EnsembleSampler(n_walkers, n_dim, likelihood, pool=pool,
-                                    moves=[emcee.moves.KDEMove()])
+                                    moves=[emcee.moves.KDEMove(bw_method=0.1)])
     
     sampler.run_mcmc(p0, n_steps, progress=True)
 
