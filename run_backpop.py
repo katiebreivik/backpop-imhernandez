@@ -96,7 +96,11 @@ if redshift_likelihood is True:
     print(qmin,qmax,mcmin,mcmax)
 
     gwsamples = np.column_stack([mcs,qs,redshift])
-    KDE = gaussian_kde(gwsamples.T)
+    
+    wts = 1/(dL**2*(1+redshift)**2*ddLdz(redshift)*m1s**2/mcs)
+    wts = wts/np.sum(wts)
+    
+    KDE = gaussian_kde(gwsamples.T, weights=wts)
 
     def likelihood(coord):
         for i in range(len(coord)):
@@ -105,14 +109,14 @@ if redshift_likelihood is True:
         if coord[1] > coord[0]:
             return -np.inf
         result = evolution(*coord)
-        m1, m2, z, dL = result[1][0], result[1][1], zoft(result[0]), dLoft(result[0])
+        m1, m2, z = result[1][0], result[1][1], zoft(result[0])
         if (m1 == 0.0) or (m2 == 0.0):
             return -np.inf
         q = m2/m1
         mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
         if ((q > qmin) and (q < qmax) and (mc > mcmin) and (mc < mcmax)):
             gw_coord = np.array([mc, q, z])
-            ll = KDE.logpdf(gw_coord) - 2*np.log(dL) - 2*np.log1p(z) - np.log(ddLdz(z)) - np.log(m1**2/mc)
+            ll = KDE.logpdf(gw_coord)
             return ll[0]
         else:
             return -np.inf
@@ -125,7 +129,11 @@ else:
     print(qmin,qmax,mcmin,mcmax)
 
     gwsamples = np.column_stack([mcs,qs])
-    KDE = gaussian_kde(gwsamples.T)
+    
+    wts = 1/(dL**2*(1+redshift)**2*ddLdz(redshift)*m1s**2/mcs)
+    wts = wts/np.sum(wts)
+
+    KDE = gaussian_kde(gwsamples.T, weights=wts)
 
     def likelihood(coord):
         for i in range(len(coord)):
@@ -134,14 +142,14 @@ else:
         if coord[1] > coord[0]:
             return -np.inf
         result = evolution(*coord)
-        m1, m2, z, dL = result[1][0], result[1][1], zoft(result[0]), dLoft(result[0])
+        m1, m2, z = result[1][0], result[1][1], zoft(result[0])
         if (m1 == 0.0) or (m2 == 0.0):
             return -np.inf
         q = m2/m1
         mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
         if ((q > qmin) and (q < qmax) and (mc > mcmin) and (mc < mcmax)):
             gw_coord = np.array([mc, q])
-            ll = KDE.logpdf(gw_coord) - 2*np.log(dL) - 2*np.log1p(z) - np.log(ddLdz(z)) - np.log(m1**2/mc)
+            ll = KDE.logpdf(gw_coord)
             return ll[0]
         else:
             return -np.inf
@@ -170,7 +178,7 @@ num_cores = int(len(os.sched_getaffinity(0)))
 print("using multiprocessing with " + str(num_cores) + " cores")
 with Pool(int(2*num_cores-2)) as pool:
     sampler = emcee.EnsembleSampler(n_walkers, n_dim, likelihood, pool=pool,
-                                    moves=[emcee.moves.KDEMove(bw_method=0.1)])
+                                    moves=[emcee.moves.KDEMove()])
     
     sampler.run_mcmc(p0, n_steps, progress=True)
 
