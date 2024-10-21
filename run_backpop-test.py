@@ -20,16 +20,13 @@ from nautilus import Prior, Sampler
 from dynesty.utils import resample_equal
 
 optp = ArgumentParser()
-optp.add_argument("--samples_path", help="path to event run dir")
 optp.add_argument("--event_name", help="name of event")
-optp.add_argument("--redshift_likelihood", type=str_to_bool, nargs='?', const=False, default=True)
 optp.add_argument('--config_name', help="configuration to use")
 optp.add_argument("--nlive", type=int, default=1000)
 optp.add_argument("--resume", type=str_to_bool, nargs='?', const=False, default=False)
 
 opts = optp.parse_args()
 
-samples_path = opts.samples_path
 event_name = opts.event_name
 resume = opts.resume
 print(resume)
@@ -43,49 +40,35 @@ except:
     pass
 
 config_name = opts.config_name
-redshift_likelihood = opts.redshift_likelihood
 params = labels_dict[config_name]
 print(config_name)
 
 evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 
-KDE, gwsamples, qmin, qmax, mcmin, mcmax = load_data(samples_path, redshift_likelihood=redshift_likelihood)
+from scipy.stats import multivariate_normal
+mean = np.array([24.0, 2.6])
+cov = np.array([[1.5**2, 0,], [0, 0.2**2]])
+rv = multivariate_normal(mean, cov)
 
-if redshift_likelihood is True:
-    config_name = config_name + '_redshift'
-    print("using redshift")
+samples = rv.rvs(10000)
+m1s = samples[:,0]
+m2s = samples[:,1]
 
-    def likelihood(coord):
-        vals = list(coord.values())
-        result = evolution(*vals)
-        m1, m2, z = result[1][0], result[1][1], zoft(result[0])
-        if (m1 == 0.0) or (m2 == 0.0):
-            return (-np.inf, 0)
-        q = m2/m1
-        mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
-        if ((q < qmax) and (mc < mcmax) and (q > qmin) and (mc > mcmin)):
-            gw_coord = np.array([mc, q, z])
-            ll = KDE.logpdf(gw_coord)
-            return (ll[0], result[0])
-        else:
-            return (-np.inf, 0)
-else:
-    print("NOT using redshift")
+m2s, m1s = np.sort([m1s,m2s],axis=0)
+qs = m2s/m1s
 
-    def likelihood(coord):
-        vals = list(coord.values())
-        result = evolution(*vals)
-        m1, m2, z = result[1][0], result[1][1], zoft(result[0])
-        if (m1 == 0.0) or (m2 == 0.0):
-            return (-np.inf, 0)
-        q = m2/m1
-        mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
-        if ((q < qmax) and (mc < mcmax) and (q > qmin) and (mc > mcmin)):
-            gw_coord = np.array([mc, q])
-            ll = KDE.logpdf(gw_coord)
-            return (ll[0], result[0])
-        else:
-            return (-np.inf, 0)
+gwsamples = np.column_stack([m1s,qs])
+
+def likelihood(coord):
+    vals = list(coord.values())
+    result = evolution(*vals)
+    m1, m2, dt = result[1][0], result[1][1], result[0]
+    if (m1 == 0.0) or (m2 == 0.0):
+        return (-np.inf, dt)
+    else:
+        gw_coord = np.array([mc, q])
+        ll = rv.logpdf(gw_coord)
+        return (ll, dt)
 
 prior = Prior()
 for i in range(len(params)):

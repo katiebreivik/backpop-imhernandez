@@ -14,7 +14,7 @@ from pesummary.io import read
 import arviz as az
 #     SUBROUTINE evolv2_global(z,zpars,acclim,alphain,qHG,qGB,kick_in)
 
-libc = cdll.LoadLibrary("/hildafs/home/magana/tmp_ondemand_hildafs_phy230014p_symlink/magana/src/COSMIC/cosmic/src/evolv2_bhms.so")
+libc = cdll.LoadLibrary("//home/magana/src/COSMIC/cosmic/src/evolv2_bhms.so")
 np.set_printoptions(suppress=True)
 
 def evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
