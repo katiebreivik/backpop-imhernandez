@@ -55,9 +55,10 @@ m1s = samples[:,0]
 m2s = samples[:,1]
 
 m2s, m1s = np.sort([m1s,m2s],axis=0)
+mcs = (m1s*m2s)**(3/5)/(m1s + m2s)**(1/5)
 qs = m2s/m1s
 
-gwsamples = np.column_stack([m1s,qs])
+gwsamples = np.column_stack([mcs,qs])
 
 def likelihood(coord):
     vals = list(coord.values())
