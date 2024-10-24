@@ -61,14 +61,14 @@ except:
 
 data = np.load(samples)
 config_name = os.path.basename(samples)[:-4]
-if config_name[-9:] == '_redshift':
-    config_name = config_name[0:-9]
+
 print(config_name)
 
 labels = labels_dict[config_name]
 
 flat_chain = data["flat_chain"]
 gwsamples = data["gwsamples"]
+gwsamples_kde = data["gwsamples_kde"]
 
 evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 
@@ -114,22 +114,23 @@ m2s_b = np.array(m2s_b)
 zs_b = zoft(np.array(ts_b))
 
 m1s,m2s = bilby.gw.conversion.chirp_mass_and_mass_ratio_to_component_masses(gwsamples[:,0], gwsamples[:,1])
+m1s_kde,m2s_kde = bilby.gw.conversion.chirp_mass_and_mass_ratio_to_component_masses(gwsamples_kde[:,0], gwsamples_kde[:,1])
 
-if config_name[-9:] == '_redshift':
-    backpop_samples_plot = np.column_stack([m1s_b,m2s_b,zs_b])
-    gwsamples_plot = np.column_stack([m1s,m2s,gwsamples[:,2]])
-else:
-    backpop_samples_plot = np.column_stack([m1s_b,m2s_b])
-    gwsamples_plot = np.column_stack([m1s,m2s])
-    
-weights=np.ones(len(backpop_samples_plot))*len(gwsamples_plot)/len(backpop_samples_plot)
+backpop_samples_plot = np.column_stack([m1s_b,m2s_b])
+gwsamples_plot = np.column_stack([m1s,m2s])
+gwsamples_kde_plot = np.column_stack([m1s_kde,m2s_kde])
+
+
+weights_1=np.ones(len(gwsamples_kde_plot))*len(gwsamples_plot)/len(gwsamples_kde_plot)
+weights_2=np.ones(len(backpop_samples_plot))*len(gwsamples_plot)/len(backpop_samples_plot)
 
 fig = corner.corner(gwsamples_plot,labels=[r'$m_1$', r'$m_2$', r'$z$'],
                     color='gray',levels=[0.68,0.95],  quantiles=[0.05,0.68,0.95],  show_titles=True,
                     label_kwargs={"fontsize": 20},
                     title_kwargs={"fontsize": 18},
                     hist_kwargs={"linewidth": 2})
-corner.corner(backpop_samples_plot,color='green',fig=fig,weights=weights)
+#corner.corner(gwsamples_kde_plot,color='orange',fig=fig,weights=weights_1)
+corner.corner(backpop_samples_plot,color='green',fig=fig,weights=weights_2)
 
 for ax in fig.get_axes():
     ax.tick_params(axis='both', labelsize=14)

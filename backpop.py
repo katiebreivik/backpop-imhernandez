@@ -14,7 +14,7 @@ from pesummary.io import read
 import arviz as az
 #     SUBROUTINE evolv2_global(z,zpars,acclim,alphain,qHG,qGB,kick_in)
 
-libc = cdll.LoadLibrary("//home/magana/src/COSMIC/cosmic/src/evolv2_bhms.so")
+libc = cdll.LoadLibrary("/hildafs/home/magana/tmp_ondemand_hildafs_phy230014p_symlink/magana/src/COSMIC/cosmic/src/evolv2_bhms.so")
 np.set_printoptions(suppress=True)
 
 def evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
@@ -126,18 +126,6 @@ def evolv2_fixed_kicks_minimal(m1, q, logtb, e, alpha, acc_lim, qHG, qGB, logZ):
     omega2 = 0.0
     return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
 
-def evolv2_fixed_kicks_eddington(m1, q, e, logtb, alpha_1, alpha_2, acc_lim_2, qHG, qGB, logZ):
-    vk1 = 0.0
-    theta1 = 0.0
-    phi1 = 0.0
-    omega1 = 0.0
-    vk2 = 0.0
-    theta2 = 0.0
-    phi2 = 0.0
-    omega2 = 0.0
-    acc_lim_1 = -1
-    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
-
 def evolv2_lowmass_secondary(m1, q, logtb, e, alpha_1, alpha_2, vk2, theta2, phi2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
     vk1 = 0.0
     theta1 = 0.0
@@ -211,9 +199,6 @@ labels_dict = {"backpop" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha
                "backpop_fixed_kicks_minimal" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',
                                                 r'$f_{\rm lim}$',r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$'],
                
-               "backpop_fixed_kicks_eddington" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',
-                                                  r'$f_{\rm lim,2}$',r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$'],
-               
                "backpop_lowmass_secondary" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',
                                               r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim,1}$',
                                               r'$f_{\rm lim,2}$',r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$'],
@@ -241,12 +226,6 @@ def get_backpop_config(config_name):
         upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, acc_limhi_1, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
 
         evolution = evolv2_fixed_kicks_minimal
-        
-    if (config_name == "backpop_fixed_kicks_eddington"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
-
-        evolution = evolv2_fixed_kicks_eddington
 
     if (config_name == "backpop_lowmass_secondary"):
         lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
@@ -285,7 +264,7 @@ zoft = interp1d(13700-tgrid,zgrid,bounds_error=False,fill_value=1000)
 tofz = interp1d(zgrid,13700-tgrid,bounds_error=False,fill_value=1e100)
 dtdz = interp1d(zgrid,np.gradient(13700-tgrid,zgrid),bounds_error=False,fill_value=1e100)
 
-def load_data(samples_path, redshift_likelihood=True):
+def load_data(samples_path):
     data = read(samples_path, package="gw")
 
     m1det = data.samples_dict['C01:Mixed']['mass_1']
@@ -306,12 +285,10 @@ def load_data(samples_path, redshift_likelihood=True):
     wts = 1/(dL**2*(1+redshift)**2*ddLdz(redshift)*m1s**2/mcs)
     wts = wts/np.sum(wts)
     
-    if redshift_likelihood:
-        gwsamples = np.column_stack([mcs,qs,redshift])
-        KDE = gaussian_kde(gwsamples.T, weights=wts)
-    else:
-        gwsamples = np.column_stack([mcs,qs])
-        KDE = gaussian_kde(gwsamples.T, weights=wts)        
+    gwsamples = np.column_stack([mcs,qs])
+    KDE = gaussian_kde(gwsamples.T, weights=wts)
+    
+    gwsamples_kde = KDE.resample(len(gwsamples)).T
 
-    return KDE, gwsamples, qmin, qmax, mcmin, mcmax
+    return KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax
     

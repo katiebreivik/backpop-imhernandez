@@ -18,6 +18,7 @@ from backpop import *
 from tqdm import tqdm
 from nautilus import Prior, Sampler
 from dynesty.utils import resample_equal
+import arviz as az
 
 optp = ArgumentParser()
 optp.add_argument("--event_name", help="name of event")
@@ -46,8 +47,8 @@ print(config_name)
 evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 
 from scipy.stats import multivariate_normal
-mean = np.array([24.0, 2.6])
-cov = np.array([[1.5**2, 0,], [0, 0.2**2]])
+mean = np.array([30.0, 8.0])
+cov = np.array([[1.5**2, 0,], [0, 0.3**2]])
 rv = multivariate_normal(mean, cov)
 
 samples = rv.rvs(10000)
@@ -60,16 +61,22 @@ qs = m2s/m1s
 
 gwsamples = np.column_stack([mcs,qs])
 
+m1min, m1max = az.hdi(m1s,0.99)
+m2min, m2max = az.hdi(m2s,0.99)
+
 def likelihood(coord):
     vals = list(coord.values())
     result = evolution(*vals)
     m1, m2, dt = result[1][0], result[1][1], result[0]
     if (m1 == 0.0) or (m2 == 0.0):
         return (-np.inf, dt)
-    else:
-        gw_coord = np.array([mc, q])
+    q = m2/m1
+    if ((q < 0.5)):
+        gw_coord = np.array([m1, m2])
         ll = rv.logpdf(gw_coord)
         return (ll, dt)
+    else:
+        return (-np.inf, dt)
 
 prior = Prior()
 for i in range(len(params)):
