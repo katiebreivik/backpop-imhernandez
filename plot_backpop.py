@@ -129,7 +129,7 @@ fig = corner.corner(gwsamples_plot,labels=[r'$m_1$', r'$m_2$', r'$z$'],
                     label_kwargs={"fontsize": 20},
                     title_kwargs={"fontsize": 18},
                     hist_kwargs={"linewidth": 2})
-#corner.corner(gwsamples_kde_plot,color='orange',fig=fig,weights=weights_1)
+corner.corner(gwsamples_kde_plot,color='orange',fig=fig,weights=weights_1)
 corner.corner(backpop_samples_plot,color='green',fig=fig,weights=weights_2)
 
 for ax in fig.get_axes():
