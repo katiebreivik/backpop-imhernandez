@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 from scipy.stats import gaussian_kde
 
@@ -19,18 +20,25 @@ from tqdm import tqdm
 from nautilus import Prior, Sampler
 from dynesty.utils import resample_equal
 
+start = time.time()
+print("Starting timer")
+
 optp = ArgumentParser()
 optp.add_argument("--samples_path", help="path to event run dir")
 optp.add_argument("--event_name", help="name of event")
 optp.add_argument('--config_name', help="configuration to use")
-optp.add_argument("--nlive", type=int, default=1000)
+optp.add_argument("--weights", type=str_to_bool, nargs='?', const=False, default=True)
+optp.add_argument("--nlive", type=int, default=3000)
+optp.add_argument("--neff", type=int, default=10000)
 optp.add_argument("--resume", type=str_to_bool, nargs='?', const=False, default=False)
 
 opts = optp.parse_args()
 
 samples_path = opts.samples_path
 event_name = opts.event_name
+weights = opts.weights
 resume = opts.resume
+print(weights)
 print(resume)
 
 output_path = "./results/" + event_name
@@ -47,7 +55,7 @@ print(config_name)
 
 evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 
-KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path)
+KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
 
 
 def likelihood(coord):
@@ -71,14 +79,15 @@ for i in range(len(params)):
 
 num_cores = int(len(os.sched_getaffinity(0)))
 num_threads = int(2*num_cores-2)
-print("using multiprocessing with " + str(num_cores) + " cores")
+print("using multiprocessing with " + str(num_threads) + " threads")
 
 dtype = [("delay_time", float)]
 
 n_live = opts.nlive
-sampler = Sampler(prior, likelihood, n_live=n_live,pool=num_threads, blobs_dtype=dtype,
+n_eff = opts.neff
+sampler = Sampler(prior, likelihood, n_live=n_live, pool=num_threads, blobs_dtype=dtype,
                   filepath="./results/" + event_name + "/" + config_name + "_checkpoint.hdf5", resume=resume)
-sampler.run(verbose=True)
+sampler.run(n_eff=n_eff,verbose=True,discard_exploration=True)
 
 points, log_w, log_l, delay_times = sampler.posterior(return_blobs=True)
 
@@ -91,3 +100,6 @@ np.savez("./results/" + event_name + "/" + config_name,
          flat_delay_times=delay_times,
          gwsamples=gwsamples,
          gwsamples_kde=gwsamples_kde)
+
+end = time.time()
+print("Execution time: " + str(end - start) + " seconds")

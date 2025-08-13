@@ -264,7 +264,7 @@ zoft = interp1d(13700-tgrid,zgrid,bounds_error=False,fill_value=1000)
 tofz = interp1d(zgrid,13700-tgrid,bounds_error=False,fill_value=1e100)
 dtdz = interp1d(zgrid,np.gradient(13700-tgrid,zgrid),bounds_error=False,fill_value=1e100)
 
-def load_data(samples_path):
+def load_data(samples_path, weights=True):
     data = read(samples_path, package="gw")
 
     m1det = data.samples_dict['C01:Mixed']['mass_1']
@@ -278,13 +278,18 @@ def load_data(samples_path):
     Ms = m1s + m2s
     qs = m2s/m1s
     
-    qmin, qmax = az.hdi(qs,0.99)
-    mcmin, mcmax = az.hdi(mcs,0.99)
+    # 0.08134597870775964 0.14305660510532858 6.021922663985887 6.203484262510087
+    qmin, qmax = az.hdi(qs,0.999)
+    mcmin, mcmax = az.hdi(mcs,0.999)
     print(qmin,qmax,mcmin,mcmax)
     
-    wts = 1/(dL**2*(1+redshift)**2*ddLdz(redshift)*m1s**2/mcs)
+    if weights is True:
+        wts = 1/(dL**2*(1+redshift)**2*ddLdz(redshift)*m1s**2/mcs)
+    else:
+        wts = np.ones(len(m1s))
+
     wts = wts/np.sum(wts)
-    
+
     gwsamples = np.column_stack([mcs,qs])
     KDE = gaussian_kde(gwsamples.T, weights=wts)
     
