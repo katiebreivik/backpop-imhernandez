@@ -58,48 +58,114 @@ evolution, lower_bound, upper_bound = get_backpop_config(config_name)
 KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
 
 
-def likelihood(coord):
-    vals = list(coord.values())
-    result = evolution(*vals)
-    m1, m2, dt = result[1][0], result[1][1], result[0]
-    if (m1 == 0.0) or (m2 == 0.0):
-        return (-np.inf, dt)
+def likelihood(lower_bound, upper_bound, params_in):
+    # enforce limits on physical values
+    for i, name in enumerate(params_in):
+        val = params_in[name]
+        if name in ["theta1", "phi1", "omega1", "theta2", "phi2", "omega2"]:
+            if val < lower_bound[i] or val > upper_bound[i]:
+                # return invalid flattened arrays
+                return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
+
+    # evolve the binary
+    result = evolv2(params_in, params_out)
+
+    # check result
+    if result[0] is None:
+        return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
+
+    # flatten arrays and force dtype
+    bpp_flat = np.array(result[1], dtype=float).ravel()
+    kick_flat = np.array(result[2], dtype=float).ravel()
+    
+    # check shapes
+    if bpp_flat.size != np.prod(BPP_SHAPE) or kick_flat.size != np.prod(KICK_SHAPE):
+        return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
+    
+    m1 = result[0]['mass_1'].values[0]
+    m2 = result[0]['mass_2'].values[0]
     q = m2/m1
     mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
         ll = KDE.logpdf(gw_coord)
-        return (ll[0], dt)
+        return (ll[0], bpp_flat, kick_flat)
     else:
-        return (-np.inf, dt)
+        return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
 
+# Set up Nautilus prior
 prior = Prior()
 for i in range(len(params)):
     prior.add_parameter(params[i], dist=(lower_bound[i], upper_bound[i]))
-
+    
 num_cores = int(len(os.sched_getaffinity(0)))
-num_threads = int(2*num_cores-2)
-print("using multiprocessing with " + str(num_threads) + " threads")
-
-dtype = [("delay_time", float)]
-
+num_threads = int(2*num_cores-2) = args.n_threads
+#print("using multiprocessing with " + str(num_threads) + " threads")
+    
+dtype = [('bpp', float, 35*len(BPP_COLUMNS)), ('kick_info', float, 2*len(KICK_COLUMNS))]
 n_live = opts.nlive
 n_eff = opts.neff
-sampler = Sampler(prior, likelihood, n_live=n_live, pool=num_threads, blobs_dtype=dtype,
-                  filepath="./results/" + event_name + "/" + config_name + "_checkpoint.hdf5", resume=resume)
+sampler = Sampler(
+    prior=prior, 
+    likelihood=likelihood, 
+    n_live=n_live, 
+    pool=num_threads,
+    blobs_dtype=dtype,
+    filepath="./results/" + event_name + "/" + config_name + "_checkpoint.hdf5",
+    resume=resume, 
+    likelihood_args=(lower_bound, upper_bound)
+)
 sampler.run(n_eff=n_eff,verbose=True,discard_exploration=True)
+    
+points, log_w, log_l, blobs = sampler.posterior(return_blobs=True)
+    
+np.save("./results/" + event_name + "/" + config_name + "/points.npy", points)
+np.save("./results/" + event_name + "/" + config_name + "/log_w.npy", log_w)
+np.save("./results/" + event_name + "/" + config_name + "/log_l.npy", log_l)
+np.save("./results/" + event_name + "/" + config_name + "/blobs.npy", blobs)
 
-points, log_w, log_l, delay_times = sampler.posterior(return_blobs=True)
+#def likelihood(coord):
+#    vals = list(coord.values())
+#    result = evolution(*vals)
+#    m1, m2, dt = result[1][0], result[1][1], result[0]
+#    if (m1 == 0.0) or (m2 == 0.0):
+#        return (-np.inf, dt)
+#    q = m2/m1
+#    mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
+#    if ((q < qmax)):
+#        gw_coord = np.array([mc, q])
+#        ll = KDE.logpdf(gw_coord)
+#        return (ll[0], dt)
+#    else:
+#        return (-np.inf, dt)
 
-logz = sampler.log_z
-dweights = np.exp(log_w - logz)
-postsamples = resample_equal(points, dweights)
-
-np.savez("./results/" + event_name + "/" + config_name,
-         flat_chain=postsamples,
-         flat_delay_times=delay_times,
-         gwsamples=gwsamples,
-         gwsamples_kde=gwsamples_kde)
-
-end = time.time()
-print("Execution time: " + str(end - start) + " seconds")
+#prior = Prior()
+#for i in range(len(params)):
+#    prior.add_parameter(params[i], dist=(lower_bound[i], upper_bound[i]))
+#
+#num_cores = int(len(os.sched_getaffinity(0)))
+#num_threads = int(2*num_cores-2)
+#print("using multiprocessing with " + str(num_threads) + " threads")
+#
+#dtype = [("delay_time", float)]
+#
+#n_live = opts.nlive
+#n_eff = opts.neff
+#sampler = Sampler(prior, likelihood, n_live=n_live, pool=num_threads, blobs_dtype=dtype,
+#                  filepath="./results/" + event_name + "/" + config_name + "_checkpoint.hdf5", resume=resume)
+#sampler.run(n_eff=n_eff,verbose=True,discard_exploration=True)
+#
+#points, log_w, log_l, delay_times = sampler.posterior(return_blobs=True)
+#
+#logz = sampler.log_z
+#dweights = np.exp(log_w - logz)
+#postsamples = resample_equal(points, dweights)
+#
+#np.savez("./results/" + event_name + "/" + config_name,
+#         flat_chain=postsamples,
+#         flat_delay_times=delay_times,
+#         gwsamples=gwsamples,
+#         gwsamples_kde=gwsamples_kde)
+#
+#end = time.time()
+#print("Execution time: " + str(end - start) + " seconds")
