@@ -3,6 +3,7 @@ from ctypes import *
 import pandas as pd
 
 from scipy.stats import gaussian_kde
+import arviz as az
 
 from scipy.stats import multivariate_normal
 from scipy.interpolate import interp1d
@@ -10,8 +11,6 @@ from scipy.interpolate import interp1d
 from astropy.cosmology import Planck15, FlatLambdaCDM, z_at_value
 from astropy import units as u
 import astropy.constants as constants
-from pesummary.io import read
-import arviz as az
 from cosmic import _evolvebin
 
 #     SUBROUTINE evolv2_global(z,zpars,acclim,alphain,qHG,qGB,kick_in)
@@ -100,7 +99,7 @@ def set_flags(params_in):
     flags["bhsigmafrac"] = 1.0
     flags["polar_kick_angle"] = 90.0
     flags["natal_kick_array"] = np.array([[-100.0,-100.0,-100.0,-100.0,0.0],[-100.0,-100.0,-100.0,-100.0,0.0]])
-    flags["kickflag"] = -1
+    flags["kickflag"] = 1
     flags["rembar_massloss"] = 0.5
     flags["bhspinmag"] = 0
     flags["don_lim"] = -2
@@ -152,10 +151,9 @@ def set_flags(params_in):
                     natal_kick[1,3] = params_in[param]
                 natal_kick[1,4] = 2
         elif param in qc_list:
-            ind_dict = {}
-            for k, v in zip(qc_list, range(0,10)):
-                ind_dict[v] = k
-            qcrit_array[ind_dict[param]] = params_in[param]
+            ind = qc_list.index(param)  # get the index of param in qc_list
+            qcrit_array[ind] = params_in[param]
+    
         elif param in ["alpha1_1", "alpha1_2"]:
             
             if param == "alpha1_2":
@@ -242,9 +240,10 @@ def set_evolvebin_flags(flags):
 def evolv2(params_in, params_out):
     # handle initial binary parameters first
     m1 = params_in["m1"] 
-    m2 = params_in["m2"]
+    q = params_in["q"]
+    m2 = q*m1
     m2, m1 = np.sort([m1,m2],axis=0)
-    tb = params_in["tb"] 
+    tb = 10**params_in["logtb"] 
     e = params_in["e"]
     metallicity = 1.23e-4
     # set the other flags
@@ -295,13 +294,13 @@ def evolv2(params_in, params_out):
     kick_info = np.zeros((2, 18))
 
 
-    [bpp_index, bcm_index, kick_info_arrays] = _evolvebin.evolv2(kstar,mass,tb,e,metallicity,tphysf,
+    [_, bpp_index, bcm_index, kick_info_arrays] = _evolvebin.evolv2(kstar,mass,tb,e,metallicity,tphysf,
                                                           dtp,mass0,rad,lumin,massc,radc,
                                                           menv,renv,ospin,B_0,bacc,tacc,epoch,tms,
                                                           bhspin,tphys,zpars,bkick,kick_info)
     
     bpp = _evolvebin.binary.bpp[:35, :n_col_bpp].copy()
-    _evolvebin.binary.bpp[:bpp_index, :n_col_bpp] = np.zeros(bpp.shape)
+    _evolvebin.binary.bpp[:35, :n_col_bpp] = np.zeros(bpp.shape)
     bcm = _evolvebin.binary.bcm[:bcm_index, :n_col_bcm].copy()
     _evolvebin.binary.bcm[:bcm_index, :n_col_bcm] = np.zeros(bcm.shape)
     
@@ -323,7 +322,7 @@ def evolv2(params_in, params_out):
 
 
 
-def evolv2_fixed_kicks(m1, q, logtb, e, alpha_1, alpha_2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
+def evolv2_fixed_kicks(m1, q, logtb, e, alpha_1, alpha_2, acc_lim_1, acc_lim_2, qHG, logZ):
     vk1 = 0.0
     theta1 = 0.0
     phi1 = 0.0
@@ -333,9 +332,9 @@ def evolv2_fixed_kicks(m1, q, logtb, e, alpha_1, alpha_2, acc_lim_1, acc_lim_2, 
     phi2 = 0.0
     omega2 = 0.0
 
-    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
+    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, logZ)
 
-def evolv2_fixed_kicks_minimal(m1, q, logtb, e, alpha, acc_lim, qHG, qGB, logZ):
+def evolv2_fixed_kicks_minimal(m1, q, logtb, e, alpha, acc_lim, qHG, logZ):
     alpha_1 = alpha
     alpha_2 = alpha
     acc_lim_1 = acc_lim
@@ -348,17 +347,17 @@ def evolv2_fixed_kicks_minimal(m1, q, logtb, e, alpha, acc_lim, qHG, qGB, logZ):
     theta2 = 0.0
     phi2 = 0.0
     omega2 = 0.0
-    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
+    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, logZ)
 
-def evolv2_lowmass_secondary(m1, q, logtb, e, alpha_1, alpha_2, vk2, theta2, phi2, acc_lim_1, acc_lim_2, qHG, qGB, logZ):
+def evolv2_lowmass_secondary(m1, q, logtb, e, alpha_1, alpha_2, vk2, theta2, phi2, acc_lim_1, acc_lim_2, qHG, logZ):
     vk1 = 0.0
     theta1 = 0.0
     phi1 = 0.0
     omega1 = 0.0
     omega2 = 0.0
-    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
+    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, logZ)
 
-def evolv2_lowmass_secondary_minimal(m1, q, logtb, e, alpha, vk2, theta2, phi2, acc_lim, qHG, qGB, logZ):
+def evolv2_lowmass_secondary_minimal(m1, q, logtb, e, alpha, vk2, theta2, phi2, acc_lim, qHG, logZ):
     vk1 = 0.0
     alpha_1 = alpha
     alpha_2 = alpha
@@ -368,7 +367,7 @@ def evolv2_lowmass_secondary_minimal(m1, q, logtb, e, alpha, vk2, theta2, phi2, 
     phi1 = 0.0
     omega1 = 0.0
     omega2 = 0.0
-    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, qGB, logZ)
+    return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, logZ)
 
 def str_to_bool(value):
     if value.lower() in {'false', 'f', '0', 'no', 'n'}:
@@ -389,7 +388,6 @@ omegalo = 0.0
 acc_limlo_1 = 0.0
 acc_limlo_2 = 0.0
 qc_kstar2lo = 0.5
-qc_kstar3lo = 0.5
 Zlo = 0.0001
 
 m1hi = 150.0
@@ -405,7 +403,6 @@ omegahi = 360
 acc_limhi_1 = 1.0
 acc_limhi_2 = 1.0
 qc_kstar2hi = 10.0
-qc_kstar3hi = 10.0
 Zhi = 0.03
 
 qlo = 0.01
@@ -415,55 +412,64 @@ qhi = 1
 labels_dict = {"backpop" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',
                             r'$v_1$',r'$\theta_1$',r'$\phi_1$',r'$\omega_1$',r'$v_2$',r'$\theta_2$',
                             r'$\phi_2$',r'$\omega_2$',r'$f_{\rm lim,1}$', r'$f_{\rm lim,2}$',
-                            r'$q_{\rm HG}$', r'$q_{\rm GB}$', r'$\log_{10}Z$'],
+                            r'$q_{\rm HG}$', r'$\log_{10}Z$'],
 
                "backpop_fixed_kicks" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',
-                                        r'$f_{\rm lim,1}$',r'$f_{\rm lim,2}$',r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$'],
+                                        r'$f_{\rm lim,1}$',r'$f_{\rm lim,2}$',r'$q_{\rm HG}$',r'$\log_{10}Z$'],
                
                "backpop_fixed_kicks_minimal" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',
-                                                r'$f_{\rm lim}$',r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$'],
+                                                r'$f_{\rm lim}$',r'$q_{\rm HG}$',r'$\log_{10}Z$'],
                
                "backpop_lowmass_secondary" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha_1$',r'$\alpha_2$',
                                               r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim,1}$',
-                                              r'$f_{\rm lim,2}$',r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$'],
+                                              r'$f_{\rm lim,2}$',r'$q_{\rm HG}$',r'$\log_{10}Z$'],
 
                "backpop_lowmass_secondary_minimal" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha$',
                                               r'$v_2$',r'$\theta_2$',r'$\phi_2$',r'$f_{\rm lim}$',
-                                              r'$q_{\rm HG}$',r'$q_{\rm GB}$',r'$\log_{10}Z$']
+                                              r'$q_{\rm HG}$', r'$\log_{10}Z$']
               }
 
 def get_backpop_config(config_name):
     if (config_name == "backpop"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
+        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'vk1', 'theta1', 'phi1', 'omega1', 'vk2', 'theta2', 'phi2', 'omega2', 'acc_lim_1', 'acc_lim_2', 'qHG', 'logZ']
 
         evolution = evolv2
 
     if (config_name == "backpop_fixed_kicks"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
+        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'acc_lim_2', 'qHG', 'logZ']
 
-        evolution = evolv2_fixed_kicks
+        evolution = evolv2
+        #evolution = evolv2_fixed_kicks
         
     if (config_name == "backpop_fixed_kicks_minimal"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, acc_limlo_1, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, acc_limhi_1, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, acc_limlo_1, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, acc_limhi_1, qc_kstar2hi, np.log10(Zhi)])
+        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'acc_lim_1', 'qHG', 'logZ']
 
-        evolution = evolv2_fixed_kicks_minimal
+        evolution = evolv2
+        #evolution = evolv2_fixed_kicks_minimal
 
     if (config_name == "backpop_lowmass_secondary"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
+        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'vk2', 'theta2', 'phi2', 'acc_lim_1', 'acc_lim_2', 'qHG', 'logZ']
         
-        evolution = evolv2_lowmass_secondary
+        evolution = evolv2
+        #evolution = evolv2_lowmass_secondary
         
     if (config_name == "backpop_lowmass_secondary_minimal"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, vklo, thetalo, philo, acc_limlo_1, qc_kstar2lo, qc_kstar3lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, vkhi, thetahi, phihi, acc_limhi_1, qc_kstar2hi, qc_kstar3hi, np.log10(Zhi)])
+        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, vklo, thetalo, philo, acc_limlo_1, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, vkhi, thetahi, phihi, acc_limhi_1, qc_kstar2hi, np.log10(Zhi)])  
+        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'vk2', 'theta2', 'phi2', 'acc_lim_1', 'qHG', 'logZ']
 
-        evolution = evolv2_lowmass_secondary_minimal
+        evolution = evolv2
+        #evolution = evolv2_lowmass_secondary_minimal
         
-    return evolution, lower_bound, upper_bound
+    return evolution, lower_bound, upper_bound, params_in
 
 
 # Cosmo routines
