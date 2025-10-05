@@ -85,14 +85,15 @@ def likelihood(rv, lower_bound, upper_bound, params_out, qmax, params_in):
     if bpp_flat.size != np.prod(BPP_SHAPE) or kick_flat.size != np.prod(KICK_SHAPE):
         return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
     
-    m1 = result[0]['mass_1'].values[0]
-    m2 = result[0]['mass_2'].values[0]
-    q = m2/m1
+    m1 = result[0]['mass_1']
+    m2 = result[0]['mass_2']
+    q = np.where(m2 <= m1, m2/m1, m1/m2)  # Ensure q is defined only when m2 <= m1
+    #q = m2/m1
     mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
         ll = rv.logpdf(gw_coord)
-        return (ll[0], bpp_flat, kick_flat)
+        return (ll, bpp_flat, kick_flat)
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
     else:

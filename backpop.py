@@ -234,6 +234,8 @@ def set_evolvebin_flags(flags):
     _evolvebin.snvars.rembar_massloss = flags["rembar_massloss"]
     _evolvebin.metvars.zsun = flags["zsun"]
     _evolvebin.snvars.kickflag = flags["kickflag"]
+    _evolvebin.se_flags.using_metisse = 0
+    _evolvebin.se_flags.using_sse = 1
 
     return None
 
@@ -305,9 +307,8 @@ def evolv2(params_in, params_out):
     _evolvebin.binary.bcm[:bcm_index, :n_col_bcm] = np.zeros(bcm.shape)
     
     
-    bpp = pd.DataFrame(bpp, columns=BPP_COLUMNS)
-    
-   
+    bpp = pd.DataFrame(bpp, columns=BPP_COLUMNS)    
+    bpp = bpp.loc[bpp.kstar_1 > 0]
     kick_info = pd.DataFrame(kick_info_arrays,
                              columns=KICK_COLUMNS,
                              index=kick_info_arrays[:, -1].astype(int))
