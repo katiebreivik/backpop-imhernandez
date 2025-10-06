@@ -355,7 +355,7 @@ def evolv2(params_in, params_out):
     
     
     bpp = pd.DataFrame(bpp, columns=BPP_COLUMNS)    
-    bpp = bpp.loc[bpp.kstar_1 > 0]
+    #bpp = bpp.loc[bpp.kstar_1 > 0]
     kick_info = pd.DataFrame(kick_info_arrays,
                              columns=KICK_COLUMNS,
                              index=kick_info_arrays[:, -1].astype(int))

@@ -51,7 +51,6 @@ except:
 config_name = opts.config_name
 params = labels_dict[config_name]
 print(config_name)
-print(len(params), params)
 
 evolution, lower_bound, upper_bound, params_in = get_backpop_config(config_name)
 
@@ -72,7 +71,6 @@ def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
 
     # evolve the binary
     result = evolv2(params_in, params_out)
-
     # check result
     if result[0] is None:
         return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
@@ -88,14 +86,11 @@ def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
     m1 = result[0]['mass_1']
     m2 = result[0]['mass_2']
     q = np.where(m2 <= m1, m2/m1, m1/m2)  # Ensure q is defined only when m2 <= m1
-    #q = m2/m1
     mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
-    if ((q < qmax)):
+    if (q < qmax):
         gw_coord = np.array([mc, q])
         ll = KDE.logpdf(gw_coord)
-        return (ll, bpp_flat, kick_flat)
-    if ((q < qmax)):
-        gw_coord = np.array([mc, q])
+        return (ll[0], bpp_flat, kick_flat)
     else:
         return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
 
@@ -108,9 +103,9 @@ for i in range(len(params_in)):
 
 params_out=['mass_1', 'mass_2']
 qmax = 1.0
-num_cores = int(len(os.sched_getaffinity(0)))
-num_threads = int(2*num_cores-2)
-
+#num_cores = int(len(os.sched_getaffinity(0)))
+#num_threads = int(2*num_cores-2)
+num_threads = 1
 print("using multiprocessing with " + str(num_threads) + " threads")
     
 dtype = [('bpp', float, 35*len(BPP_COLUMNS)), ('kick_info', float, 2*len(KICK_COLUMNS))]
