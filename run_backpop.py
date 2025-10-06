@@ -110,6 +110,7 @@ params_out=['mass_1', 'mass_2']
 qmax = 1.0
 num_cores = int(len(os.sched_getaffinity(0)))
 num_threads = int(2*num_cores-2)
+
 print("using multiprocessing with " + str(num_threads) + " threads")
     
 dtype = [('bpp', float, 35*len(BPP_COLUMNS)), ('kick_info', float, 2*len(KICK_COLUMNS))]

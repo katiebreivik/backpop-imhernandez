@@ -103,7 +103,7 @@ def set_flags(params_in):
     flags["remnantflag"] = 4
     flags["grflag"] = 1
     flags["bhms_coll_flag"] = 1
-    flags["mxns"] = 3.0
+    flags["mxns"] = 1.0
     flags["pisn"] = -2
     flags["ecsn"] = 2.5
     flags["ecsn_mlow"] = 1.6
@@ -360,8 +360,10 @@ def evolv2(params_in, params_out):
                              columns=KICK_COLUMNS,
                              index=kick_info_arrays[:, -1].astype(int))
     
-    out = bpp.loc[((bpp.kstar_1 == 14) & (bpp.kstar_2.isin([13,14])) & (bpp.evol_type == 3)) |
-                  ((bpp.kstar_1.isin([13,14])) & (bpp.kstar_2 == 14) & (bpp.evol_type == 3))]
+    out = bpp.loc[((bpp.kstar_1 == 14) & (bpp.kstar_2 == 14) & (bpp.evol_type == 3)) |
+                  ((bpp.kstar_1 == 14) & (bpp.kstar_2 == 14) & (bpp.evol_type == 3))]
+    
+    
     
     if len(out) > 0:
         return out[params_out].iloc[0], bpp.to_numpy(), kick_info.to_numpy()
