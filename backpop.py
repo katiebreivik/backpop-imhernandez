@@ -4,6 +4,8 @@ import pandas as pd
 
 from scipy.stats import gaussian_kde
 import arviz as az
+from pesummary.io import read
+from pesummary.gw.fetch import fetch_open_samples
 
 from scipy.stats import multivariate_normal
 from scipy.interpolate import interp1d
@@ -59,6 +61,19 @@ KICK_SHAPE = (2, len(KICK_COLUMNS))
 
 
 def set_flags(params_in):
+    ''' Set the COSMIC flags based on input parameters.
+    If a parameter is not specified in params_in, it is set to a default value.
+     
+    Parameters
+    ----------
+    params_in : dict
+        Dictionary of input parameters to set. Keys are parameter names, values are parameter values.
+        
+    Returns
+    -------
+    flags : dict
+        Dictionary of all COSMIC flags set.
+    '''
     #set the flags to the defaults
     flags = dict()
 
@@ -176,6 +191,17 @@ def set_flags(params_in):
 
 
 def set_evolvebin_flags(flags):
+    ''' Set the COSMIC flags in the _evolvebin module.
+
+    Parameters
+    ----------
+    flags : dict
+        Dictionary of flags to set in _evolvebin.
+
+    Returns
+    -------
+    None
+    '''
     _evolvebin.windvars.neta = flags["neta"]
     _evolvebin.windvars.bwind = flags["bwind"]
     _evolvebin.windvars.hewind = flags["hewind"]
@@ -240,6 +266,27 @@ def set_evolvebin_flags(flags):
     return None
 
 def evolv2(params_in, params_out):
+    ''' Evolve a binary with COSMIC given initial parameters with
+    a direct call to the _evolvebin module.
+
+    Parameters
+    ----------
+    params_in : dict
+        Dictionary of input parameters to evolve. Keys are parameter names, values are parameter values.
+    params_out : list   
+        List of parameter names to return from the final state of the binary.
+    
+    Returns
+    -------
+    out : tuple
+        Tuple of (final_state, bpp, kick_info)
+        final_state : pd.DataFrame
+            DataFrame of the final state of the binary with columns specified in params_out.
+        bpp : np.ndarray
+            Array of the binary population parameters (BPP) from COSMIC - format for us to work with Nautilus.
+        kick_info : np.ndarray
+            Array of the kick information from COSMIC - format for us to work with Nautilus - format for us to work with Nautilus.
+    '''
     # handle initial binary parameters first
     m1 = params_in["m1"] 
     q = params_in["q"]
@@ -495,7 +542,56 @@ zoft = interp1d(13700-tgrid,zgrid,bounds_error=False,fill_value=1000)
 tofz = interp1d(zgrid,13700-tgrid,bounds_error=False,fill_value=1e100)
 dtdz = interp1d(zgrid,np.gradient(13700-tgrid,zgrid),bounds_error=False,fill_value=1e100)
 
+def get_190814_data(path, outdir="./"):
+    ''' Fetch the GW190814 data from the GWTC-2 catalog using pesummary 
+    
+    Parameters
+    ----------
+    path : str
+        The path (including filename) to save the data to.
+    outdir : str, optional
+        The directory to save the file to. Default is the current directory. 
+        
+    Returns
+    -------
+    data : pesummary.gw.fileio.GWFile
+        The GW190814 data.
+    '''
+
+    data = fetch_open_samples(
+    "GW190814", outdir=outdir, path=path
+    )
+
+    return data
+
+
 def load_data(samples_path, weights=True):
+    ''' Load the GW190814 data from the given path and return the KDE and samples.
+    
+    Parameters
+    ----------
+    samples_path : str
+        The path to the GW190814 samples file.
+    weights : bool, optional
+        Whether to use weights for the KDE. Default is True.
+        
+    Returns
+    -------
+    KDE : scipy.stats.gaussian_kde
+        The KDE of the GW190814 data.
+    gwsamples : np.ndarray
+        The original GW190814 samples.
+    gwsamples_kde : np.ndarray
+        The resampled GW190814 samples from the KDE.
+    qmin : float
+        The minimum mass ratio of the GW190814 samples.
+    qmax : float
+        The maximum mass ratio of the GW190814 samples.
+    mcmin : float
+        The minimum chirp mass of the GW190814 samples.
+    mcmax : float
+        The maximum chirp mass of the GW190814 samples.
+    '''
     data = read(samples_path, package="gw")
 
     m1det = data.samples_dict['C01:Mixed']['mass_1']

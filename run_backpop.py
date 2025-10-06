@@ -14,7 +14,7 @@ import h5py
 from astropy.cosmology import Planck15, FlatLambdaCDM, z_at_value
 from astropy import units as u
 import astropy.constants as constants
-#from pesummary.io import read
+from pesummary.io import read
 from backpop import *
 from tqdm import tqdm
 from nautilus import Prior, Sampler
@@ -55,13 +55,13 @@ print(len(params), params)
 
 evolution, lower_bound, upper_bound, params_in = get_backpop_config(config_name)
 
-mean = np.array([6.1, 0.112])
-cov = np.array([[0.1**2, 0], [0, 0.005**2]])
-rv = multivariate_normal(mean, cov)
-#KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
+#mean = np.array([6.1, 0.112])
+#cov = np.array([[0.1**2, 0], [0, 0.005**2]])
+#rv = multivariate_normal(mean, cov)
+KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
 
 # split out rv with KDE if you have GW samples
-def likelihood(rv, lower_bound, upper_bound, params_out, qmax, params_in):
+def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
     # enforce limits on physical values
     for i, name in enumerate(params_in):
         val = params_in[name]
@@ -92,7 +92,7 @@ def likelihood(rv, lower_bound, upper_bound, params_out, qmax, params_in):
     mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
-        ll = rv.logpdf(gw_coord)
+        ll = KDE.logpdf(gw_coord)
         return (ll, bpp_flat, kick_flat)
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
@@ -108,10 +108,8 @@ for i in range(len(params_in)):
 
 params_out=['mass_1', 'mass_2']
 qmax = 1.0
-#num_cores = int(len(os.sched_getaffinity(0)))
-#num_cores = 1
-#num_threads = int(2*num_cores-2)
-num_threads = 1
+num_cores = int(len(os.sched_getaffinity(0)))
+num_threads = int(2*num_cores-2)
 print("using multiprocessing with " + str(num_threads) + " threads")
     
 dtype = [('bpp', float, 35*len(BPP_COLUMNS)), ('kick_info', float, 2*len(KICK_COLUMNS))]
@@ -125,7 +123,7 @@ sampler = Sampler(
     blobs_dtype=dtype,
     filepath="./results/" + event_name + "/" + config_name + "_checkpoint.hdf5",
     resume=resume, 
-    likelihood_args=(rv, lower_bound, upper_bound, params_out, qmax)
+    likelihood_args=(KDE, lower_bound, upper_bound, params_out, qmax)
 )
 sampler.run(n_eff=n_eff,verbose=True,discard_exploration=True)
     
