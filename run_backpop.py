@@ -18,7 +18,6 @@ from pesummary.io import read
 from backpop import *
 from tqdm import tqdm
 from nautilus import Prior, Sampler
-from dynesty.utils import resample_equal
 
 start = time.time()
 print("Starting timer")
@@ -63,6 +62,7 @@ print(config_name)
 evolution, lower_bound, upper_bound, params_in = get_backpop_config(config_name)
 
 KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
+print("qmax = " + str(qmax))
 
 # split out rv with KDE if you have GW samples
 def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
@@ -104,10 +104,7 @@ prior = Prior()
 for i in range(len(params_in)):
     prior.add_parameter(params_in[i], dist=(lower_bound[i], upper_bound[i]))
 
-
-
 params_out=['mass_1', 'mass_2']
-qmax = 1.0
 num_cores = int(len(os.sched_getaffinity(0)))
 num_threads = int(2*num_cores-2)
 
@@ -130,12 +127,25 @@ sampler.run(n_eff=n_eff,verbose=True,discard_exploration=True)
     
 points, log_w, log_l, blobs = sampler.posterior(return_blobs=True)
 
-logz = sampler.log_z
-dweights = np.exp(log_w - logz)
-postsamples = resample_equal(points, dweights)
+log_z = sampler.log_z
+dweights = np.exp(log_w - log_z)
+dweights = dweights/np.sum(dweights)
 
+np.save(output_path + "points.npy", points)
+np.save(output_path + "log_w.npy", log_w)
+np.save(output_path + "log_l.npy", log_l)
+np.save(output_path + "log_z.npy", log_z)
 np.save(output_path + "blobs.npy", blobs)
+
+size = int(len(dweights)/2)
+index = np.arange(len(dweights))
+choose = np.random.choice(index, size=size, replace=False, p=dweights)
+
+postsamples = points[choose]
+blobs_choose = blobs[choose]
+
 np.save(output_path + "postsamples.npy", postsamples)
+np.save(output_path + "blobs_choose.npy", blobs_choose)
 
 end = time.time()
 print("Execution time: " + str(end - start) + " seconds")
