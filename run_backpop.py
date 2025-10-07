@@ -137,7 +137,7 @@ np.save(output_path + "log_l.npy", log_l)
 np.save(output_path + "log_z.npy", log_z)
 np.save(output_path + "blobs.npy", blobs)
 
-size = int(len(dweights)/2)
+size = int(len(dweights)/5)
 index = np.arange(len(dweights))
 choose = np.random.choice(index, size=size, replace=False, p=dweights)
 
