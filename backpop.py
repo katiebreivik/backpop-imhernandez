@@ -56,14 +56,16 @@ KICK_COLUMNS = ['star', 'disrupted', 'natal_kick', 'phi', 'theta', 'mean_anomaly
                 'delta_vsysx_2', 'delta_vsysy_2', 'delta_vsysz_2', 'vsys_2_total',
                 'theta_euler', 'phi_euler', 'psi_euler', 'randomseed']
 
-BPP_SHAPE = (35, len(BPP_COLUMNS))
+cols_keep = ['tphys', 'mass_1', 'mass_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2']
+
+BPP_SHAPE = (25, len(cols_keep))
 KICK_SHAPE = (2, len(KICK_COLUMNS))
 
 
 def set_flags(params_in):
     ''' Set the COSMIC flags based on input parameters.
     If a parameter is not specified in params_in, it is set to a default value.
-     
+    
     Parameters
     ----------
     params_in : dict
@@ -348,14 +350,14 @@ def evolv2(params_in, params_out):
                                                           menv,renv,ospin,B_0,bacc,tacc,epoch,tms,
                                                           bhspin,tphys,zpars,bkick,kick_info)
     
-    bpp = _evolvebin.binary.bpp[:35, :n_col_bpp].copy()
-    _evolvebin.binary.bpp[:35, :n_col_bpp] = np.zeros(bpp.shape)
+    bpp = _evolvebin.binary.bpp[:25, :n_col_bpp].copy()
+    _evolvebin.binary.bpp[:25, :n_col_bpp] = np.zeros(bpp.shape)
     bcm = _evolvebin.binary.bcm[:bcm_index, :n_col_bcm].copy()
     _evolvebin.binary.bcm[:bcm_index, :n_col_bcm] = np.zeros(bcm.shape)
     
     
-    bpp = pd.DataFrame(bpp, columns=BPP_COLUMNS)    
-    #bpp = bpp.loc[bpp.kstar_1 > 0]
+    bpp = pd.DataFrame(bpp, columns=BPP_COLUMNS)   
+    bpp = bpp[cols_keep] 
     kick_info = pd.DataFrame(kick_info_arrays,
                              columns=KICK_COLUMNS,
                              index=kick_info_arrays[:, -1].astype(int))
