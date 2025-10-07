@@ -291,8 +291,9 @@ def evolv2(params_in, params_out):
     '''
     # handle initial binary parameters first
     m1 = params_in["m1"] 
-    q = params_in["q"]
-    m2 = q*m1
+    #q = params_in["q"]
+    #m2 = q*m1
+    m2 = params_in["m2"]
     m2, m1 = np.sort([m1,m2],axis=0)
     tb = 10**params_in["logtb"] 
     e = params_in["e"]
@@ -429,6 +430,7 @@ def str_to_bool(value):
     raise ValueError(f'{value} is not a valid boolean value')
 
 m1lo = 1.0
+m2lo = 1.0
 tblo = 1.0
 elo = 0.0
 alphalo_1 = 0.1
@@ -483,16 +485,16 @@ labels_dict = {"backpop" : [r'$m_1$',r'$m_2$',r'$\log_{10}t_b$',r'$e$',r'$\alpha
 
 def get_backpop_config(config_name):
     if (config_name == "backpop"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
-        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'vk1', 'theta1', 'phi1', 'omega1', 'vk2', 'theta2', 'phi2', 'omega2', 'acc_lim_1', 'acc_lim_2', 'qHG', 'logZ']
+        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, vklo, thetalo, philo, omegalo, vklo, thetalo, philo, omegalo, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, vkhi, thetahi, phihi, omegahi, vkhi, thetahi, phihi, omegahi, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
+        params_in = ['m1', 'm2', 'logtb', 'e', 'alpha_1', 'alpha_2', 'vk1', 'theta1', 'phi1', 'omega1', 'vk2', 'theta2', 'phi2', 'omega2', 'acc_lim_1', 'acc_lim_2', 'qHG', 'logZ']
 
         evolution = evolv2
 
     if (config_name == "backpop_fixed_kicks"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
-        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'acc_lim_2', 'qHG', 'logZ']
+        lower_bound = np.array([m1lo, m2lo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, m2hi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
+        params_in = ['m1', 'm2', 'logtb', 'e', 'alpha_1', 'alpha_2', 'acc_lim_1', 'acc_lim_2', 'qHG', 'logZ']
 
         evolution = evolv2
         #evolution = evolv2_fixed_kicks
