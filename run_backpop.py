@@ -48,6 +48,13 @@ except:
     print("Output directory already exists. Continuing...")
     pass
 
+cols_keep = ['tphys', 'mass_1', 'mass_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2']
+KICK_COLUMNS = ['star', 'disrupted', 'natal_kick', 'phi', 'theta', 'mean_anomaly',
+                'delta_vsysx_1', 'delta_vsysy_1', 'delta_vsysz_1', 'vsys_1_total',
+                'delta_vsysx_2', 'delta_vsysy_2', 'delta_vsysz_2', 'vsys_2_total',
+                'theta_euler', 'phi_euler', 'psi_euler', 'randomseed']
+
+
 config_name = opts.config_name
 params = labels_dict[config_name]
 print(config_name)
@@ -93,7 +100,7 @@ def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
         ll = KDE.logpdf(gw_coord)
-        return (ll, bpp_flat, kick_flat)
+        return (ll[0], bpp_flat, kick_flat)
     if ((q < qmax)):
         gw_coord = np.array([mc, q])
     else:
@@ -112,7 +119,7 @@ num_cores = int(len(os.sched_getaffinity(0)))
 num_threads = int(2*num_cores-2)
 print("using multiprocessing with " + str(num_threads) + " threads")
     
-dtype = [('bpp', float, 35*len(BPP_COLUMNS)), ('kick_info', float, 2*len(KICK_COLUMNS))]
+dtype = [('bpp', float, 25*len(cols_keep)), ('kick_info', float, 2*len(KICK_COLUMNS))]
 n_live = opts.nlive
 n_eff = opts.neff
 sampler = Sampler(
