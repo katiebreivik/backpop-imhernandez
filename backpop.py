@@ -82,8 +82,8 @@ def set_flags(params_in):
     flags["neta"] = 0.5
     flags["bwind"] = 0.0
     flags["hewind"] = 0.5
-    flags["beta"] = 0.125
-    flags["xi"] = 0.0
+    flags["beta"] = -1
+    flags["xi"] = 0.5
     flags["acc2"] = 1.5
     flags["epsnov"] = 0.001
     flags["eddfac"] = 1.0
@@ -99,9 +99,9 @@ def set_flags(params_in):
     flags["rtmsflag"] = 0
     flags["ceflag"] = 1
     flags["cekickflag"] = 2
-    flags["cemergeflag"] = 0
+    flags["cemergeflag"] = 1
     flags["cehestarflag"] = 0
-    flags["bhflag"] = 0
+    flags["bhflag"] = 1
     flags["remnantflag"] = 4
     flags["grflag"] = 1
     flags["bhms_coll_flag"] = 1
@@ -111,7 +111,7 @@ def set_flags(params_in):
     flags["ecsn_mlow"] = 1.6
     flags["aic"] = 1
     flags["ussn"] = 1
-    flags["sigma"] = 265.0
+    flags["sigma"] = 0
     flags["sigmadiv"] = -20.0
     flags["bhsigmafrac"] = 1.0
     flags["polar_kick_angle"] = 90.0
@@ -119,7 +119,7 @@ def set_flags(params_in):
     flags["kickflag"] = 1
     flags["rembar_massloss"] = 0.5
     flags["bhspinmag"] = 0
-    flags["don_lim"] = -2
+    flags["don_lim"] = -1
     flags["acc_lim"] = np.array([-1, -1])
     flags["gamma"] = -2
     flags["bdecayfac"] = 1
@@ -132,11 +132,11 @@ def set_flags(params_in):
     flags["randomseed"] = 42
     flags["bhspinflag"] = 0
     flags["rejuv_fac"] = 1.0
-    flags["rejuvflag"] = 1
-    flags["htpmb"] = 3
-    flags["ST_cr"] = 0
-    flags["ST_tide"] = 0
-    flags["zsun"] = 0.02
+    flags["rejuvflag"] = 0
+    flags["htpmb"] = 1
+    flags["ST_cr"] = 1
+    flags["ST_tide"] = 1
+    flags["zsun"] = 0.014
     flags["using_cmc"] = 0
     natal_kick = np.zeros((2,5))
     qcrit_array = np.zeros(16)
@@ -303,7 +303,6 @@ def evolv2(params_in, params_out):
     m1 = params_in["m1"] 
     q = params_in["q"]
     m2 = q*m1
-    m2, m1 = np.sort([m1,m2],axis=0)
     tb = 10**params_in["logtb"] 
     e = params_in["e"]
     metallicity = 10**params_in['logZ']
@@ -439,6 +438,7 @@ def str_to_bool(value):
     raise ValueError(f'{value} is not a valid boolean value')
 
 m1lo = 1.0
+m2lo = 1.0
 tblo = 1.0
 elo = 0.0
 alphalo_1 = 0.1
@@ -502,7 +502,7 @@ def get_backpop_config(config_name):
     if (config_name == "backpop_fixed_kicks"):
         lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, alphalo_2, acc_limlo_1, acc_limlo_2, qc_kstar2lo, np.log10(Zlo)])
         upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, alphahi_2, acc_limhi_1, acc_limhi_2, qc_kstar2hi, np.log10(Zhi)])
-        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'acc_lim_2', 'qHG', 'logZ']
+        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'alpha_2', 'acc_lim_1', 'acc_lim_2', 'qHG', 'logZ']
 
         evolution = evolv2
         #evolution = evolv2_fixed_kicks

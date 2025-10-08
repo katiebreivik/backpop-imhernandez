@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import emcee
 import bilby
 
@@ -25,6 +26,55 @@ sns.set_context('talk')
 sns.set_style('ticks')
 sns.set_palette('colorblind')
 cs = sns.color_palette('colorblind',as_cmap=True)
+
+
+def load_process_data_fast(dat_path_in, param_columns, n_posterior_samples=10000):
+   
+    # Load data
+    points = np.load(dat_path_in + "/points.npy")
+    log_z = np.load(dat_path_in + "/log_z.npy")
+    log_w = np.load(dat_path_in + "/log_w.npy")
+    blobs = np.load(dat_path_in + "/blobs.npy", allow_pickle=True)
+
+    dweights = np.exp(log_w - log_z)
+    dweights = dweights/np.sum(dweights)
+    
+    indices = np.random.choice(len(points), size=n_posterior_samples, replace=True, p=dweights)
+    points_sample = pd.DataFrame(points[indices], columns=param_columns)
+    points = []
+    log_w = []
+    log_z = []
+    dweights = []
+
+    # Process blobs
+    blobs_sample = blobs[indices]
+    blobs = []
+    
+    # --- Vectorized BPP and Kick assembly ---
+    # Extract bpp and kick arrays from all blobs in one pass
+    bpp_list = [b['bpp'].reshape(BPP_SHAPE) for b in blobs_sample]
+    kick_list = [b['kick_info'].reshape(KICK_SHAPE) for b in blobs_sample]
+    
+    # Concatenate into big arrays
+    bpp_all = np.concatenate(bpp_list, axis=0)   # shape: (sum of all rows, BPP_COLS)
+    kick_all = np.concatenate(kick_list, axis=0) # shape: (sum of all rows, KICK_COLS)
+
+    # Build bin_num arrays
+    bin_sizes_bpp = np.array([b.shape[0] for b in bpp_list])
+    bin_sizes_kick = np.array([k.shape[0] for k in kick_list])
+    bin_nums_bpp = np.repeat(np.arange(len(bpp_list)), bin_sizes_bpp)
+    bin_nums_kick = np.repeat(np.arange(len(kick_list)), bin_sizes_kick)
+
+    # Build DataFrames
+    bpp_full = pd.DataFrame(bpp_all, columns=BPP_COLUMNS)
+    kick_full = pd.DataFrame(kick_all, columns=KICK_COLUMNS)
+    bpp_full['bin_num'] = bin_nums_bpp
+    kick_full['bin_num'] = bin_nums_kick
+
+    # Filter valid bpp rows
+    bpp_full = bpp_full.loc[bpp_full.mass_1 > 0]
+
+    return points_sample, bpp_full, kick_full
 
 SMALL_SIZE = 8
 MEDIUM_SIZE = 10
