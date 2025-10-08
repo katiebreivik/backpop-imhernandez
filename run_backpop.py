@@ -66,14 +66,6 @@ print("qmax = " + str(qmax))
 
 # split out rv with KDE if you have GW samples
 def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
-    # enforce limits on physical values
-    for i, name in enumerate(params_in):
-        val = params_in[name]
-        if name in ["theta1", "phi1", "omega1", "theta2", "phi2", "omega2"]:
-            if val < lower_bound[i] or val > upper_bound[i]:
-                # return invalid flattened arrays
-                return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
-
     # evolve the binary
     result = evolv2(params_in, params_out)
     # check result
@@ -136,16 +128,6 @@ np.save(output_path + "log_w.npy", log_w)
 np.save(output_path + "log_l.npy", log_l)
 np.save(output_path + "log_z.npy", log_z)
 np.save(output_path + "blobs.npy", blobs)
-
-size = int(len(dweights)/5)
-index = np.arange(len(dweights))
-choose = np.random.choice(index, size=size, replace=False, p=dweights)
-
-postsamples = points[choose]
-blobs_choose = blobs[choose]
-
-np.save(output_path + "postsamples.npy", postsamples)
-np.save(output_path + "blobs_choose.npy", blobs_choose)
 
 end = time.time()
 print("Execution time: " + str(end - start) + " seconds")
