@@ -19,56 +19,9 @@ from backpop import *
 from tqdm import tqdm
 from nautilus import Prior, Sampler
 
-<<<<<<< HEAD
-=======
-start = time.time()
-print("Starting timer")
-
-optp = ArgumentParser()
-optp.add_argument("--samples_path", help="path to event run dir")
-optp.add_argument("--event_name", help="name of event")
-optp.add_argument('--config_name', help="configuration to use")
-optp.add_argument("--weights", type=str_to_bool, nargs='?', const=False, default=True)
-optp.add_argument("--nlive", type=int, default=3000)
-optp.add_argument("--neff", type=int, default=10000)
-optp.add_argument("--resume", type=str_to_bool, nargs='?', const=False, default=False)
-
-opts = optp.parse_args()
-
-samples_path = opts.samples_path
-event_name = opts.event_name
-config_name = opts.config_name
-weights = opts.weights
-resume = opts.resume
-print(weights)
-print(resume)
-
-output_path = "./results/" + event_name + "/" + config_name + "/"
-print(output_path)
-try:
-    os.makedirs(output_path, exist_ok=False)
-except:
-    print("Output directory already exists. Continuing...")
-    pass
-
-cols_keep = ['tphys', 'mass_1', 'mass_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2']
-KICK_COLUMNS = ['star', 'disrupted', 'natal_kick', 'phi', 'theta', 'mean_anomaly',
-                'delta_vsysx_1', 'delta_vsysy_1', 'delta_vsysz_1', 'vsys_1_total',
-                'delta_vsysx_2', 'delta_vsysy_2', 'delta_vsysz_2', 'vsys_2_total',
-                'theta_euler', 'phi_euler', 'psi_euler', 'randomseed']
-
-
-params = labels_dict[config_name]
-print(config_name)
-
-evolution, lower_bound, upper_bound, params_in = get_backpop_config(config_name)
-
-KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
-print("qmax = " + str(qmax))
->>>>>>> im/main
 
 # split out rv with KDE if you have GW samples
-def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
+def likelihood(KDE, params_out, qmax, params_in):
     # evolve the binary
     result = evolv2(params_in, params_out)
     # check result
@@ -144,8 +97,6 @@ if __name__ == "__main__":
     for i in range(len(params_in)):
         prior.add_parameter(params_in[i], dist=(lower_bound[i], upper_bound[i]))
 
-
-
     params_out=['mass_1', 'mass_2']
     #num_cores = int(len(os.sched_getaffinity(0)))
     #num_threads = int(2*num_cores-2)
@@ -163,7 +114,7 @@ if __name__ == "__main__":
         blobs_dtype=dtype,
         filepath="./results/" + event_name + "/" + config_name + "/" + "checkpoint.hdf5",
         resume=resume, 
-        likelihood_args=(KDE, lower_bound, upper_bound, params_out, qmax)
+        likelihood_args=(KDE, params_out, qmax)
 )
     sampler.run(n_eff=n_eff,verbose=True,discard_exploration=True)
     
