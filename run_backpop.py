@@ -18,19 +18,57 @@ from pesummary.io import read
 from backpop import *
 from tqdm import tqdm
 from nautilus import Prior, Sampler
-from dynesty.utils import resample_equal
 
+<<<<<<< HEAD
+=======
+start = time.time()
+print("Starting timer")
+
+optp = ArgumentParser()
+optp.add_argument("--samples_path", help="path to event run dir")
+optp.add_argument("--event_name", help="name of event")
+optp.add_argument('--config_name', help="configuration to use")
+optp.add_argument("--weights", type=str_to_bool, nargs='?', const=False, default=True)
+optp.add_argument("--nlive", type=int, default=3000)
+optp.add_argument("--neff", type=int, default=10000)
+optp.add_argument("--resume", type=str_to_bool, nargs='?', const=False, default=False)
+
+opts = optp.parse_args()
+
+samples_path = opts.samples_path
+event_name = opts.event_name
+config_name = opts.config_name
+weights = opts.weights
+resume = opts.resume
+print(weights)
+print(resume)
+
+output_path = "./results/" + event_name + "/" + config_name + "/"
+print(output_path)
+try:
+    os.makedirs(output_path, exist_ok=False)
+except:
+    print("Output directory already exists. Continuing...")
+    pass
+
+cols_keep = ['tphys', 'mass_1', 'mass_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2']
+KICK_COLUMNS = ['star', 'disrupted', 'natal_kick', 'phi', 'theta', 'mean_anomaly',
+                'delta_vsysx_1', 'delta_vsysy_1', 'delta_vsysz_1', 'vsys_1_total',
+                'delta_vsysx_2', 'delta_vsysy_2', 'delta_vsysz_2', 'vsys_2_total',
+                'theta_euler', 'phi_euler', 'psi_euler', 'randomseed']
+
+
+params = labels_dict[config_name]
+print(config_name)
+
+evolution, lower_bound, upper_bound, params_in = get_backpop_config(config_name)
+
+KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
+print("qmax = " + str(qmax))
+>>>>>>> im/main
 
 # split out rv with KDE if you have GW samples
 def likelihood(KDE, lower_bound, upper_bound, params_out, qmax, params_in):
-    # enforce limits on physical values
-    for i, name in enumerate(params_in):
-        val = params_in[name]
-        if name in ["theta1", "phi1", "omega1", "theta2", "phi2", "omega2"]:
-            if val < lower_bound[i] or val > upper_bound[i]:
-                # return invalid flattened arrays
-                return -np.inf, np.full(np.prod(BPP_SHAPE), np.nan, dtype=float), np.full(np.prod(KICK_SHAPE), np.nan, dtype=float)
-
     # evolve the binary
     result = evolv2(params_in, params_out)
     # check result
@@ -109,7 +147,6 @@ if __name__ == "__main__":
 
 
     params_out=['mass_1', 'mass_2']
-    qmax = 1.0
     #num_cores = int(len(os.sched_getaffinity(0)))
     #num_threads = int(2*num_cores-2)
     num_threads = 10
@@ -132,12 +169,15 @@ if __name__ == "__main__":
     
     points, log_w, log_l, blobs = sampler.posterior(return_blobs=True)
 
-    logz = sampler.log_z
-    dweights = np.exp(log_w - logz)
-    postsamples = resample_equal(points, dweights)
-
+    log_z = sampler.log_z
+    dweights = np.exp(log_w - log_z)
+    dweights = dweights/np.sum(dweights)
+    
+    np.save(output_path + "points.npy", points)
+    np.save(output_path + "log_w.npy", log_w)
+    np.save(output_path + "log_l.npy", log_l)
+    np.save(output_path + "log_z.npy", log_z)
     np.save(output_path + "blobs.npy", blobs)
-    np.save(output_path + "postsamples.npy", postsamples)
 
     end = time.time()
     print("Execution time: " + str(end - start) + " seconds")

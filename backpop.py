@@ -141,6 +141,7 @@ def set_flags(params_in):
     natal_kick = np.zeros((2,5))
     qcrit_array = np.zeros(16)
     alpha1 = np.zeros(2)
+    acc_lim = np.zeros(2)
     qc_list = ["qMSlo", "qMS", "qHG", "qGB", "qCHeB", "qAGB", "qTPAGB", "qHeMS", "qHeGB", "qHeAGB"]
     
     for param in params_in.keys():
@@ -177,18 +178,27 @@ def set_flags(params_in):
                 alpha1[1] = params_in[param]
             elif param == "alpha1_1":
                 alpha1[0] = params_in[param]
+                
+        elif param in ["acc_lim_1", "acc_lim_2"]:
+            
+            if param == "acc_lim_2":
+                acc_lim[1] = params_in[param]
+            elif param == "acc_lim_1":
+                acc_lim[0] = params_in[param]
 
         else:
             flags[param] = params_in[param]
 
 
     if np.any(qcrit_array != 0.0):
-        flags["qcrit_array"] = qcrit_array   
+        flags["qcrit_array"] = qcrit_array
     if np.any(natal_kick != 0.0):
         # does this need to be flattened?
         flags["natal_kick_array"] = natal_kick
     if np.any(alpha1 != 0.0):
         flags["alpha1"] = alpha1
+    if np.any(acc_lim != 0.0):
+        flags["acc_lim"] = acc_lim
     return flags
 
 
@@ -297,7 +307,7 @@ def evolv2(params_in, params_out):
     m2, m1 = np.sort([m1,m2],axis=0)
     tb = 10**params_in["logtb"] 
     e = params_in["e"]
-    metallicity = 1.23e-4
+    metallicity = 10**params_in['logZ']
     # set the other flags
     flags = set_flags(params_in)
     _ = set_evolvebin_flags(flags)
