@@ -27,6 +27,7 @@ sns.set_style('ticks')
 sns.set_palette('colorblind')
 cs = sns.color_palette('colorblind',as_cmap=True)
 
+cols_keep = ['tphys', 'mass_1', 'mass_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2']
 
 def load_process_data_fast(dat_path_in, param_columns, n_posterior_samples=10000):
    
@@ -66,7 +67,7 @@ def load_process_data_fast(dat_path_in, param_columns, n_posterior_samples=10000
     bin_nums_kick = np.repeat(np.arange(len(kick_list)), bin_sizes_kick)
 
     # Build DataFrames
-    bpp_full = pd.DataFrame(bpp_all, columns=BPP_COLUMNS)
+    bpp_full = pd.DataFrame(bpp_all, columns=cols_keep)
     kick_full = pd.DataFrame(kick_all, columns=KICK_COLUMNS)
     bpp_full['bin_num'] = bin_nums_bpp
     kick_full['bin_num'] = bin_nums_kick
@@ -100,6 +101,7 @@ opts = optp.parse_args()
 samples = opts.samples
 event_name = opts.event_name
 config_name = opts.config_name
+print(config_name)
 
 output_path = "./results/" + event_name + "/" + config_name + "/"
 
@@ -109,11 +111,11 @@ except:
     print("Output directoryy already exists. Continuing...")
     pass
 
-data = np.load(samples)
-
-print(config_name)
-
 labels = labels_dict[config_name]
+
+points_sample, bpp_full, kick_full = load_process_data_fast(samples, labels, n_posterior_samples=10000)
+
+data = points_sample.to_numpy()
 
 m2 = data[:,0]*data[:,1]
 data[:,1] = m2
@@ -130,6 +132,7 @@ for ax in fig.get_axes():
 plt.savefig(output_path + "corner.pdf")
 plt.close()
 
+print(bpp_full)
 # #### MAKE m1,m2 PLOT ####
 # m1s_b = []
 # m2s_b = []
