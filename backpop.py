@@ -56,7 +56,7 @@ KICK_COLUMNS = ['star', 'disrupted', 'natal_kick', 'phi', 'theta', 'mean_anomaly
                 'delta_vsysx_2', 'delta_vsysy_2', 'delta_vsysz_2', 'vsys_2_total',
                 'theta_euler', 'phi_euler', 'psi_euler', 'randomseed']
 
-cols_keep = ['tphys', 'mass_1', 'mass_2', 'menv_1', 'menv_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2', 'lum_1', 'lum_2']
+cols_keep = ['tphys', 'mass_1', 'mass_2', 'massc_1', 'massc_2', 'menv_1', 'menv_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2', 'lum_1', 'lum_2']
 
 BPP_SHAPE = (25, len(cols_keep))
 KICK_SHAPE = (2, len(KICK_COLUMNS))
@@ -97,7 +97,7 @@ def set_flags(params_in):
     flags["ifflag"] = 0
     flags["wdflag"] = 1
     flags["rtmsflag"] = 0
-    flags["ceflag"] = 1
+    flags["ceflag"] = 0
     flags["cekickflag"] = 2
     flags["cemergeflag"] = 1
     flags["cehestarflag"] = 0
@@ -135,7 +135,7 @@ def set_flags(params_in):
     flags["rejuvflag"] = 0
     flags["htpmb"] = 1
     flags["ST_cr"] = 1
-    flags["ST_tide"] = 1
+    flags["ST_tide"] = 2
     flags["zsun"] = 0.014
     flags["using_cmc"] = 0
     natal_kick = np.zeros((2,5))
@@ -303,7 +303,10 @@ def evolv2(params_in, params_out):
     q = params_in["q"]
     m2 = q*m1
     tb = 10**params_in["logtb"] 
-    e = params_in["e"]
+    if "e" in params_in:
+        e = params_in["e"]
+    else:
+        e = 0.0
     metallicity = 10**params_in['logZ']
     # set the other flags
     flags = set_flags(params_in)
@@ -417,7 +420,7 @@ def evolv2_lowmass_secondary(m1, q, logtb, e, alpha_1, alpha_2, vk2, theta2, phi
     omega2 = 0.0
     return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, logZ)
 
-def evolv2_lowmass_secondary_minimal(m1, q, logtb, e, alpha, vk2, theta2, phi2, acc_lim, qHG, logZ):
+def evolv2_lowmass_secondary_minimal(m1, q, logtb, e, alpha, vk2, theta2, phi2, omega2, acc_lim, logZ):
     vk1 = 0.0
     alpha_1 = alpha
     alpha_2 = alpha
@@ -426,7 +429,10 @@ def evolv2_lowmass_secondary_minimal(m1, q, logtb, e, alpha, vk2, theta2, phi2, 
     theta1 = 0.0
     phi1 = 0.0
     omega1 = 0.0
-    omega2 = 0.0
+    e=0.0
+    
+    qHG = 0.0
+
     return evolv2(m1, q, logtb, e, alpha_1, alpha_2, vk1, theta1, phi1, omega1, vk2, theta2, phi2, omega2, acc_lim_1, acc_lim_2, qHG, logZ)
 
 def evolv2_vk2_alpha_lambda(m1, q, logtb, e, alpha, vk2, theta2, phi2, acc_lim, qHG, logZ):
@@ -533,9 +539,9 @@ def get_backpop_config(config_name):
         evolution = evolv2_lowmass_secondary
         
     if (config_name == "backpop_lowmass_secondary_minimal"):
-        lower_bound = np.array([m1lo, qlo, np.log10(tblo), elo, alphalo_1, vklo, thetalo, philo, omegalo, acc_limlo_1, np.log10(Zlo)])
-        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), ehi, alphahi_1, vkhi, thetahi, phihi, omegahi, acc_limhi_1, np.log10(Zhi)])  
-        params_in = ['m1', 'q', 'logtb', 'e', 'alpha_1', 'vk2', 'theta2', 'phi2', 'omega2', 'acc_lim_1', 'logZ']
+        lower_bound = np.array([m1lo, qlo, np.log10(tblo), alphalo_1, vklo, thetalo, philo, omegalo, acc_limlo_1, np.log10(Zlo)])
+        upper_bound = np.array([m1hi, qhi, np.log10(tbhi), alphahi_1, vkhi, thetahi, phihi, omegahi, acc_limhi_1, np.log10(Zhi)])  
+        params_in = ['m1', 'q', 'logtb', 'alpha_1', 'vk2', 'theta2', 'phi2', 'omega2', 'acc_lim_1', 'logZ']
 
         evolution = evolv2_lowmass_secondary_minimal
         
@@ -639,7 +645,7 @@ def load_data(samples_path, weights=True):
 
     wts = wts/np.sum(wts)
 
-    gwsamples = np.column_stack([mcs,qs])
+    gwsamples = np.column_stack([Ms,qs])
     KDE = gaussian_kde(gwsamples.T, weights=wts)
     
     gwsamples_kde = KDE.resample(len(gwsamples)).T

@@ -40,8 +40,9 @@ def likelihood(KDE, params_out, qmax, params_in):
     m2 = result[0]['mass_2']
     q = np.where(m2 <= m1, m2/m1, m1/m2)  # Ensure q is defined only when m2 <= m1
     mc = (m1*m2)**(3/5)/(m1 + m2)**(1/5)
+    Mtot = m1+m2
     if (q < qmax):
-        gw_coord = np.array([mc, q])
+        gw_coord = np.array([Mtot, q])
         ll = KDE.logpdf(gw_coord)
         return (ll[0], bpp_flat, kick_flat)
     else:
@@ -78,7 +79,7 @@ if __name__ == "__main__":
         print("Output directory already exists. Continuing...")
         pass
 
-    cols_keep = ['tphys', 'mass_1', 'mass_2', 'menv_1', 'menv_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2', 'lum_1', 'lum_2']
+    cols_keep = ['tphys', 'mass_1', 'mass_2', 'massc_1', 'massc_2', 'menv_1', 'menv_2', 'kstar_1', 'kstar_2', 'porb', 'ecc', 'evol_type', 'rad_1', 'rad_2', 'lum_1', 'lum_2']
     KICK_COLUMNS = ['star', 'disrupted', 'natal_kick', 'phi', 'theta', 'mean_anomaly',
                     'delta_vsysx_1', 'delta_vsysy_1', 'delta_vsysz_1', 'vsys_1_total',
                     'delta_vsysx_2', 'delta_vsysy_2', 'delta_vsysz_2', 'vsys_2_total',
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     evolution, lower_bound, upper_bound, params_in = get_backpop_config(config_name)
 
     KDE, gwsamples, gwsamples_kde, qmin, qmax, mcmin, mcmax = load_data(samples_path, weights)
-    qmax = max(qmax, 0.3)
+    #qmax = max(qmax, 0.3)
     print(f'qmax={qmax}, qmin={qmin}, mcmax={mcmax}, mcmin={mcmin}')
     # Set up Nautilus prior
     prior = Prior()
@@ -99,8 +100,9 @@ if __name__ == "__main__":
         prior.add_parameter(params_in[i], dist=(lower_bound[i], upper_bound[i]))
 
     params_out=['mass_1', 'mass_2']
-    num_cores = int(len(os.sched_getaffinity(0)))
-    num_threads = int(2*num_cores-2)
+    #num_cores = int(len(os.sched_getaffinity(0)))
+    #num_threads = int(2*num_cores-2)
+    num_threads = 10
     print("using multiprocessing with " + str(num_threads) + " threads")
     
     dtype = [('bpp', float, 25*len(cols_keep)), ('kick_info', float, 2*len(KICK_COLUMNS))]
